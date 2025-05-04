@@ -45,17 +45,18 @@ class ZeroShotClassifierService:
             status_code=500,
             detail=constants.INFERENCE_ERROR_MESSAGE,
             )
-
-        threshold = 0.5
+        
+        threshold = max(0.3, 1 / len(request.labels))
 
         predicted_labels = [label for label, score in zip(result['labels'], result['scores']) if score >= threshold]
+
 
         probabilities = [
             TagProbability(label=label, score=float(score))
             for label, score in zip(result['labels'], result['scores'])
         ]
 
-        if predicted_labels[0] == "":
+        if len(predicted_labels) == 0:
 
             logger.info(constants.TAGS_EMPTY)
             raise HTTPException(status_code=204, detail=constants.TAGS_EMPTY)
