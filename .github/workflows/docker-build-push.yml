@@ -28,5 +28,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/taggerAPI:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/taggerAPI:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/taggerapi:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/taggerapi:${{ github.sha }}
