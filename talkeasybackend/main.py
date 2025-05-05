@@ -1,13 +1,12 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from api.routes import auth_routes
-from pathlib import Path
-
+from routes import auth_routes, messages_routes
 
 app = FastAPI()
 
 app.include_router(auth_routes.router)
+app.include_router(messages_routes.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
