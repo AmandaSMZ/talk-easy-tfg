@@ -5,10 +5,9 @@ asyncpg
 python-dotenv
 python-jose
 bcrypt==4.0.1
-passlib==1.7.4
+passlib[bcrypt]
 pymongo
 python-multipart
 psycopg2-binary 
 pydantic[email]
-alembic
 httpx

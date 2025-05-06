@@ -4,7 +4,6 @@ from infraestructure.ext_api.api_ia import get_label
 from sqlalchemy.orm import Session
 
 async def send_message_use_case(message: MessageCreate, db: Session) -> MessageResponse:
-    # 1. Llama a la IA para etiquetar el mensaje
     label = await get_label(message.content)
     
     # 2. Guarda el mensaje usando la función repository

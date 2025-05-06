@@ -16,7 +16,7 @@ services:
     build: ./talkeasybackend/
     container_name: talkeasy_api
     restart: unless-stopped
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./talkeasybackend/:/code
     ports:

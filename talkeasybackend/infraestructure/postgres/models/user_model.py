@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from infraestructure.postgres.database import Base
 
+
 class User(Base):
     __tablename__ = "users"
 
