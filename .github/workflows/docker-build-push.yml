@@ -5,7 +5,7 @@ on:
     branches:
       - tags
     paths:
-      - 'taggerAPI/**'
+      - 'taggingAPI/**'
 
 jobs:
   build:

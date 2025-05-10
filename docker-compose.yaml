@@ -13,12 +13,12 @@ services:
       - "5432:5432"
 
   api:
-    build: ./talkeasybackend/
+    build: ./talkeasy/
     container_name: talkeasy_api
     restart: unless-stopped
     command: sh -c "python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
-      - ./talkeasybackend/:/code
+      - ./talkeasy/:/code
     ports:
       - "8000:8000"
     depends_on:
