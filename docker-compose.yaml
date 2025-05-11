@@ -26,15 +26,15 @@ services:
     env_file:
       - .env
   tagger-api:
-    container_name: tagger-api
-    image: tagger-api
+    container_name: tagging-api
+    image: tagging-api
     restart: unless-stopped
     build: 
-      context: ./taggerAPI
+      context: ./taggingAPI
     ports:
       - "5000:5000"
     volumes:
-      - ./taggerAPI/app:/app 
+      - ./taggingAPI/app:/app 
     command: uvicorn main:app --host 0.0.0.0 --port 5000 --reload
 
 volumes:

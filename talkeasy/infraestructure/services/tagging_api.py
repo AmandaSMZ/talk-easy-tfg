@@ -1,9 +1,14 @@
 import httpx
 
-TAGGING_API_URL = "http://taggingAPI:8001/tag"  # Modifica el host/puerto real
+TAGGING_API_URL = "http://taggingAPI:8001/tag"
 
-async def request_tags(content: str) -> list[str]:
+async def request_tags(content: str, tags: list[str]) -> list[str]:
+    payload = {
+        "text": content,
+        "labels": tags
+
+    }
     async with httpx.AsyncClient() as client:
-        response = await client.post(TAGGING_API_URL, json={"content": content})
+        response = await client.post(TAGGING_API_URL, json=payload)
         response.raise_for_status()
         return response.json().get("tags", [])

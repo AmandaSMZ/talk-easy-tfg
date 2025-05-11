@@ -1,19 +1,18 @@
 from domain.message_domain import DomainMessage
-from services.tagging_api import request_tags
-from infra.repository.message_repository import save_message
+from infraestructure.services.tagging_api import request_tags
+from infraestructure.db.repository import save_new_message, get_tags
 
 async def send_message(db, msg_in_schema):
-    # 1. Instancia el dominio a partir del schema de entrada
     domain_msg = DomainMessage(
         from_user=msg_in_schema.from_user,
         to_user=msg_in_schema.to_user,
         content=msg_in_schema.content
     )
 
-    # 2. Llama a la api de etiquetado y añade las etiquetas
-    domain_msg.tags = await request_tags(domain_msg.content)
+    possible_tags = get_tags(db)
 
-    # 3. Guarda el mensaje y sus tags en la base de datos
-    db_msg, tag_objs = save_message(db, domain_msg)
+    domain_msg.tags = await request_tags(domain_msg.content, possible_tags)
 
-    return domain_msg, db_msg, tag_objs
+    msg = save_new_message(db, domain_msg)
+
+    return msg
