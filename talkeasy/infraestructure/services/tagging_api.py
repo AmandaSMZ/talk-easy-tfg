@@ -1,6 +1,6 @@
 import httpx
 
-TAGGING_API_URL = "http://taggingAPI:8001/tag"
+TAGGING_API_URL = "http://tagging-api:5000/tag-message"
 
 async def request_tags(content: str, tags: list[str]) -> list[str]:
     payload = {
@@ -11,4 +11,4 @@ async def request_tags(content: str, tags: list[str]) -> list[str]:
     async with httpx.AsyncClient() as client:
         response = await client.post(TAGGING_API_URL, json=payload)
         response.raise_for_status()
-        return response.json().get("tags", [])
+        return response.json().get("predicted_labels", [])

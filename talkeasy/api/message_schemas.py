@@ -8,6 +8,7 @@ class MessageIn(BaseModel):
     content: str
 
 
-class MessageOutSender(MessageIn):
+class MessageOutSender(BaseModel):
+    content: str
     timestamp: datetime
     tags: Optional[list[str]] = None

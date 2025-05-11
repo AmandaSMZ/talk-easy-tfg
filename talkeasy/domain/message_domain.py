@@ -1,7 +1,7 @@
 from api.message_schemas import MessageOutSender
 
 class DomainMessage:
-    def __init__(self, from_user, to_user, content, timestamp, tags=None, is_read=False, id=None):
+    def __init__(self, from_user, to_user, content, timestamp=None, tags=None, is_read=False, id=None):
         self.id = id
         self.from_user = from_user
         self.to_user = to_user

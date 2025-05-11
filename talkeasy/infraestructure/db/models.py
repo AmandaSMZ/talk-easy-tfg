@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
-from config import Base
-from datetime import datetime
+from infraestructure.db.config import Base
+from datetime import datetime, timezone
 
 class MessageModel(Base):
     __tablename__ = "messages"
@@ -9,7 +9,7 @@ class MessageModel(Base):
     from_user = Column(String, nullable=False)
     to_user = Column(String, nullable=False)
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.now(datetime.timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_read = Column(Boolean, nullable=True)
 
 class MessageTagModel(Base):
