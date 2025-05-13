@@ -41,3 +41,36 @@ def get_tags_list(db: Session):
     tags_objs = db.query(TagsModel).all()
     possible_tags = [tag.name for tag in tags_objs]
     return possible_tags
+
+def get_chat_messages(db: Session, user1: str, user2: str, last_id = None):
+
+    query = (
+        db.query(MessageModel)
+        .filter(
+            ((MessageModel.from_user == user1) & (MessageModel.to_user == user2)) |
+            ((MessageModel.from_user == user2) & (MessageModel.to_user == user1))
+        )
+    )
+
+    if last_id is not None:
+        query = query.filter(MessageModel.id > last_id)
+
+    query = query.order_by(MessageModel.timestamp)
+    result = []
+
+    for msg in query.all():
+
+        tag_ids = [ tag_rel.tag_id for tag_rel in db.query(MessageTagModel).filter_by(message_id=msg.id).all()]
+
+        tag_objs = []
+
+        if tag_ids:
+            tag_objs = db.query(TagsModel).filter(TagsModel.id.in_(tag_ids)).all()
+
+        tags=[t.name for t in tag_objs]
+
+        domain_msg = db_models_to_domain(msg, tags)
+
+        result.append(domain_msg)
+
+    return result

@@ -1,6 +1,6 @@
 from domain.message_domain import DomainMessage
 from infraestructure.services.tagging_api import request_tags
-from infraestructure.db.repository import save_new_message, get_tags_list
+from infraestructure.db.repository import get_chat_messages, save_new_message, get_tags_list
 from mappers import msgModel_to_msgSenderSchema
 
 async def send_message(db, msg_in_schema):
@@ -17,3 +17,7 @@ async def send_message(db, msg_in_schema):
     msg = save_new_message(db, domain_msg)
 
     return msgModel_to_msgSenderSchema(msg)
+
+def get_chat_between_users(db, user1, user2, last_id=None):
+    
+    return get_chat_messages(db, user1, user2, last_id)
