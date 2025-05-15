@@ -3,7 +3,6 @@ from typing import Optional
 from datetime import datetime
 
 class MessageIn(BaseModel):
-    id:int
     from_user: str
     to_user: str
     content: str
@@ -16,5 +15,6 @@ class MessageOutSender(BaseModel):
 
 
 class MessageOut(MessageIn):
+    id: int
     timestamp: datetime
     tags: Optional[list[str]] = None

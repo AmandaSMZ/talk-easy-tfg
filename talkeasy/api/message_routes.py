@@ -8,10 +8,14 @@ from mappers import msgModel_to_msgOutSchema
 
 router = APIRouter()
 
-@router.post("/send", response_model=MessageOutSender, status_code=status.HTTP_201_CREATED)
+
+@router.post("/send", 
+    response_model=MessageOutSender, 
+    status_code=status.HTTP_201_CREATED)
 async def send_message_route(msg: MessageIn, db: Session = Depends(get_db)):
 
     return await send_message(db, msg)
+
 
 @router.get(
     "/chat/{with_user}",
