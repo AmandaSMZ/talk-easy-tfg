@@ -16,13 +16,15 @@ services:
     build: ./talkeasy/
     container_name: talkeasy_api
     restart: unless-stopped
-    command: sh -c "python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
-    volumes:
-      - ./talkeasy/:/code
     ports:
-      - "8000:8000"
+      - "8001:8001"
     depends_on:
       - db
+    command:
+      sh -c "./wait-for-it.sh db:5432 --strict --timeout=60 -- python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
+    volumes:
+      - ./wait-for-it.sh:/code/wait-for-it.sh
+      - ./talkeasy/:/code
     env_file:
       - .env
   tagger-api:
@@ -32,22 +34,39 @@ services:
     build: 
       context: ./taggingAPI
     ports:
-      - "5000:5000"
+      - "8002:8002"
     volumes:
       - ./taggingAPI/app:/app 
-    command: uvicorn main:app --host 0.0.0.0 --port 5000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0
-    container_name: keycloak
+  auth-api:
+    container_name: auth-api
+    build:
+      context: ./auth-api
     restart: unless-stopped
     ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    command: start-dev
+      - "8003:8003"
     depends_on:
       - db
+    env_file:
+      - .env
+    command:
+      sh -c "python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload"
+    volumes:
+      - ./auth-api:/code
+
+  gateway:
+    build:
+      context: ./api-gateway
+    container_name: gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth-api
+      - api
+    command: 
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   pgdata:

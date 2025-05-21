@@ -46,7 +46,7 @@ class ZeroShotClassifierService:
             detail=constants.INFERENCE_ERROR_MESSAGE,
             )
         
-        threshold = max(0.3, 1 / len(request.labels))
+        threshold = max(0.5, 1 / len(request.labels))
 
         predicted_labels = [label for label, score in zip(result['labels'], result['scores']) if score >= threshold]
 

@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Bool
 from infraestructure.db.config import Base
 from datetime import datetime, timezone
 
-
 class MessageModel(Base):
     __tablename__ = "messages"
 

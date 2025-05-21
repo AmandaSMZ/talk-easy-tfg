@@ -1,3 +1,4 @@
+from typing import List
 from sqlalchemy.orm import Session
 from .models import MessageModel, MessageTagModel, TagsModel
 from domain.message_domain import DomainMessage
@@ -74,3 +75,25 @@ def get_chat_messages(db: Session, user1: str, user2: str, last_id = None):
         result.append(domain_msg)
 
     return result
+
+
+def create_tags(db: Session, tags: List[str]):
+
+    saved_tags = []
+    for tag_name in tags:
+        tag_name = tag_name.strip()
+        if not tag_name:
+            continue
+
+        existing_tag = db.query(TagsModel).filter(TagsModel.name == tag_name).first()
+
+        if existing_tag:
+            saved_tags.append(existing_tag)
+
+        else:
+            new_tag = TagsModel(name=tag_name)
+            db.add(new_tag)
+            db.commit()
+            db.refresh(new_tag)
+            saved_tags.append(new_tag)
+    return saved_tags

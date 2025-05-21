@@ -1,3 +1,4 @@
+from httpx import HTTPStatusError
 from domain.message_domain import DomainMessage
 from infraestructure.services.tagging_api import request_tags
 from infraestructure.db.repository import get_chat_messages, save_new_message, get_tags_list
@@ -17,7 +18,14 @@ async def send_message(db, msg_in_schema):
 
     possible_tags = get_tags_list(db)
 
-    domain_msg.tags = await request_tags(domain_msg.content, possible_tags)
+    try:
+        domain_msg.tags = await request_tags(domain_msg.content, possible_tags)
+
+    except HTTPStatusError as e:
+       
+        print(f"Error etiquetando mensaje: {e}")
+        domain_msg.tags = []
+
 
     msg_saved = save_new_message(db, domain_msg)
 

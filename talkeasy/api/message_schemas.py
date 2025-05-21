@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 
 class MessageIn(BaseModel):
@@ -18,3 +18,9 @@ class MessageOut(MessageIn):
     id: int
     timestamp: datetime
     tags: Optional[list[str]] = None
+
+class TagIn(BaseModel):
+    name: str
+
+class TagsIn(BaseModel):
+    tags: List[TagIn]
