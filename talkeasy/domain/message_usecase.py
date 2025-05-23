@@ -8,11 +8,11 @@ from infraestructure.websockets.connection_manager import connection_manager
 from fastapi.encoders import jsonable_encoder
 
 
-async def send_message(db, msg_in_schema):
+async def send_message(db, msg_in_schema, user_id):
 
     domain_msg = DomainMessage(
-        from_user=msg_in_schema.from_user,
-        to_user=msg_in_schema.to_user,
+        from_user_id=user_id,
+        to_user_id=msg_in_schema.to_user_id,
         content=msg_in_schema.content
     )
 
@@ -34,7 +34,7 @@ async def send_message(db, msg_in_schema):
             "type": "new_message",
             "message": jsonable_encoder(msgModel_to_msgSenderSchema(msg_saved)),
         },
-        msg_saved.to_user
+        msg_saved.to_user_id
     )
 
     return msgModel_to_msgSenderSchema(msg_saved)

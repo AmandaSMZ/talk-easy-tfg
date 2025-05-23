@@ -6,8 +6,8 @@ from api.message_schemas import MessageOut, MessageOutSender
 def db_models_to_domain(db_msg: MessageModel, tags: List[str]) -> DomainMessage:
     return DomainMessage(
         id=db_msg.id,
-        from_user=db_msg.from_user,
-        to_user=db_msg.to_user,
+        from_user_id=db_msg.from_user_id,
+        to_user_id=db_msg.to_user_id,
         content=db_msg.content,
         timestamp=db_msg.timestamp,
         tags=tags,
@@ -24,8 +24,8 @@ def msgModel_to_msgSenderSchema(msgDomain: DomainMessage):
 def msgModel_to_msgOutSchema(msgDomain: DomainMessage):
     return MessageOut(
         id=msgDomain.id,
-        from_user=msgDomain.from_user,
-        to_user=msgDomain.to_user,
+        from_user_id=msgDomain.from_user_id,
+        to_user_id=msgDomain.to_user_id,
         content=msgDomain.content,
         timestamp=msgDomain.timestamp,
         tags=msgDomain.tags,

@@ -6,8 +6,8 @@ from mappers import db_models_to_domain
 
 def save_new_message(db: Session, domain_msg) -> tuple:
     db_msg = MessageModel(
-        from_user=domain_msg.from_user,
-        to_user=domain_msg.to_user,
+        from_user_id=domain_msg.from_user_id,
+        to_user_id=domain_msg.to_user_id,
         content=domain_msg.content,
     )
     db.add(db_msg)
@@ -48,8 +48,8 @@ def get_chat_messages(db: Session, user1: str, user2: str, last_id = None):
     query = (
         db.query(MessageModel)
         .filter(
-            ((MessageModel.from_user == user1) & (MessageModel.to_user == user2)) |
-            ((MessageModel.from_user == user2) & (MessageModel.to_user == user1))
+            ((MessageModel.from_user_id == user1) & (MessageModel.to_user_id == user2)) |
+            ((MessageModel.from_user_id == user2) & (MessageModel.to_user_id == user1))
         )
     )
 

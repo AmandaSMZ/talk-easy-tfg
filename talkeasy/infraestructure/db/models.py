@@ -1,26 +1,29 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from infraestructure.db.config import Base
 from datetime import datetime, timezone
+import uuid
 
 class MessageModel(Base):
     __tablename__ = "messages"
 
-    id = Column(Integer, primary_key=True, index=True)
-    from_user = Column(String, nullable=False)
-    to_user = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    is_read = Column(Boolean, nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    from_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    to_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    is_read: Mapped[bool | None] = mapped_column(nullable=True)
 
 class MessageTagModel(Base):
     __tablename__ = "message_tags"
 
-    id = Column(Integer, primary_key=True, index=True)
-    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
-    tag_id = Column(Integer, ForeignKey("tags.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=False)
+    tag_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tags.id"), nullable=False)
 
 class TagsModel(Base):
     __tablename__ = "tags"
     
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String, nullable=False)

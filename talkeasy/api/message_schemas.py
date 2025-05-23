@@ -1,10 +1,10 @@
+from uuid import UUID
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
 class MessageIn(BaseModel):
-    from_user: str
-    to_user: str
+    to_user_id: UUID
     content: str
 
 
@@ -15,7 +15,7 @@ class MessageOutSender(BaseModel):
 
 
 class MessageOut(MessageIn):
-    id: int
+    id: UUID
     timestamp: datetime
     tags: Optional[list[str]] = None
 

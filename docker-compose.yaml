@@ -1,12 +1,50 @@
 version: '3.8'
 
 services:
+  auth-db:
+    container_name: auth-db
+    image: postgres:15
+    env_file:
+    - auth-api/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+
+  auth-api:
+    container_name: auth-api
+    build:
+      context: ./auth-api
+    restart: unless-stopped
+    ports:
+      - "8003:8000"
+    depends_on:
+      - auth-db
+    command:
+      sh -c "./wait-for-it.sh auth-db:5432 --strict --timeout=60 -- python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./wait-for-it.sh:/code/wait-for-it.sh
+      - ./auth-api:/code
+  
+  tagger-api:
+    container_name: tagging-api
+    image: tagging-api
+    restart: unless-stopped
+    build: 
+      context: ./taggingAPI
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./taggingAPI/app:/app 
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
   db:
     image: postgres:15
     container_name: talkeasy-postgres
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: TALKEASY_DB_NAME
+      POSTGRES_USER: TALKEASY_DB_USER
+      POSTGRES_PASSWORD: TALKEASY_DB_PASSWORD
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -27,33 +65,9 @@ services:
       - ./talkeasy/:/code
     env_file:
       - .env
-  tagger-api:
-    container_name: tagging-api
-    image: tagging-api
-    restart: unless-stopped
-    build: 
-      context: ./taggingAPI
-    ports:
-      - "8002:8002"
-    volumes:
-      - ./taggingAPI/app:/app 
-    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 
-  auth-api:
-    container_name: auth-api
-    build:
-      context: ./auth-api
-    restart: unless-stopped
-    ports:
-      - "8003:8003"
-    depends_on:
-      - db
-    env_file:
-      - .env
-    command:
-      sh -c "python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload"
-    volumes:
-      - ./auth-api:/code
+
+
 
   gateway:
     build:
@@ -70,3 +84,4 @@ services:
 
 volumes:
   pgdata:
+  auth-data:
