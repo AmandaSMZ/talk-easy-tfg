@@ -63,11 +63,6 @@ services:
     volumes:
       - ./wait-for-it.sh:/code/wait-for-it.sh
       - ./talkeasy/:/code
-    env_file:
-      - .env
-
-
-
 
   gateway:
     build:
