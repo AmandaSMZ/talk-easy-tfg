@@ -120,6 +120,7 @@ print(r.json())
 ---
 
 
-## 📎 Notas
+    📎 Notas
 
-- El modelo se descarga automáticamente la primera vez que se ejecuta.
+    El modelo se descarga automáticamente la primera vez que se ejecuta.
+    La documentación completa está disponible en /docs y /redoc
