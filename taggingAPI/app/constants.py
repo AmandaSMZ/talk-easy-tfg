@@ -3,7 +3,7 @@ MODEL_OK = "Modelo IA cargado correctamente."
 MODEL_INIT_ERROR = "Error inicializando el modelo IA: "
 MESSAGE_EMPTY = "Texto vacío recibido en la petición."
 TAG_INPUT_ERROR = "Lista de etiquetas vacía o malformada."
-PROCESSING = "Procesando texto."
+PROCESSING = "Procesando texto..."
 INFERENCE_ERROR = "Error durante la inferencia del modelo IA: "
 TAGS_EMPTY = "No se han encontrado etiquetas relevantes para el texto dado."
 
