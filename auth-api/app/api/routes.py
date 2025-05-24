@@ -20,7 +20,7 @@ async def register(
     if not new_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered"
+            detail="Email already registered."
         )
     return new_user
 

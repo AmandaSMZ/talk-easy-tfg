@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - auth
-    paths:
-      - 'auth-api/**'
 
 jobs:
   build:
