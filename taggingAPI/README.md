@@ -74,7 +74,7 @@ Etiqueta automáticamente mensajes usando un modelo preentrenado.
     ```
 3. **Verificación**
 
-    Abre un navegador web o usa herramientas como curl o Postman para acceder a http://localhost:8002 y verificar que la API esté corriendo correctamente.
+    Abre un navegador web y accede a http://localhost:8000/docs. Aparecerá la documentación oficial de la api y podrás probar sus endpoints.
 
 ---
 
