@@ -1,6 +1,6 @@
 import httpx
 
-TAGGING_API_URL = "http://tagging-api:8002/tag-message"
+TAGGING_API_URL = "http://tagging-api:8003/tag-message"
 
 async def request_tags(content: str, tags: list[str]) -> list[str]:
     payload = {
@@ -17,5 +17,13 @@ async def request_tags(content: str, tags: list[str]) -> list[str]:
         try:
             return response.json().get("predicted_labels", [])
         except ValueError:
-            
+
             return []
+
+TALKEASY_API_URL = "http://talkeasy-api:8002"
+
+async def get_available_tags() -> list[str]:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{TALKEASY_API_URL}/tags/available")
+        response.raise_for_status()
+        return response.json()

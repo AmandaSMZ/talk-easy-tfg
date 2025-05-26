@@ -35,12 +35,12 @@ async def login(
     
     return token
 
-@router.get("/users/me", response_model=UserRead)
+@router.get("/me", response_model=UserRead)
 async def get_me(current_user: User = Depends(get_current_user)):
 
     return current_user
 
-@router.get("/users/search", response_model=list[UserRead])
+@router.get("/users/search/{email}", response_model=list[UserRead])
 async def search_users_route(
     email: str,
     _: User = Depends(get_current_user),  # solo verifico que el usuario está autenticado, aunque no lo uso

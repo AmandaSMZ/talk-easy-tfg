@@ -26,40 +26,39 @@ services:
       - ./auth-api:/code
       - ./wait-for-it.sh:/code/wait-for-it.sh
   
-  tagger-api:
+  tagging-api:
     container_name: tagging-api
     image: tagging-api
     restart: unless-stopped
     build: 
       context: ./taggingAPI
     ports:
-      - "8002:8000"
+      - "8003:8000"
     volumes:
       - ./taggingAPI/app:/app 
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-  db:
+
+  talkeasy-db:
     image: postgres:15
-    container_name: talkeasy-postgres
+    container_name: talkeasy_postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: TALKEASY_DB_NAME
-      POSTGRES_USER: TALKEASY_DB_USER
-      POSTGRES_PASSWORD: TALKEASY_DB_PASSWORD
+    env_file:
+      - ./talkeasy/.env
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
-  api:
+  talkeasy-api:
     build: ./talkeasy/
     container_name: talkeasy_api
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "8002:8000"
     depends_on:
-      - db
+      - talkeasy-db
     command:
-      sh -c "./wait-for-it.sh db:5432 --strict --timeout=60 -- python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
+      sh -c "./wait-for-it.sh talkeasy-db:5432 --strict --timeout=60 -- python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ./wait-for-it.sh:/code/wait-for-it.sh
       - ./talkeasy/:/code
@@ -67,13 +66,16 @@ services:
   gateway:
     build:
       context: ./api-gateway
-    container_name: gateway
+    container_name: gateway-talkeasy
     restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
       - auth-api
-      - api
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    volumes:
+      - ./api-gateway/:/code
     command: 
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
