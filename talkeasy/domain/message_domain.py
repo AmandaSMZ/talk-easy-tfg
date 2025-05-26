@@ -15,9 +15,10 @@ class DomainMessage:
 
 @dataclass
 class DomainTag:
-    def __init__(self, name: str, id: UUID = None):
+    def __init__(self, name: str, id: UUID = None, user_id=UUID):
         self.id = id
         self.name = name
+        self.user_id = user_id
 
 @dataclass
 class DomainConversation:

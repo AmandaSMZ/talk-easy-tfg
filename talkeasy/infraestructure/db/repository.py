@@ -89,7 +89,7 @@ async def create_tags(db: AsyncSession, tags: List[DomainTag]):
             saved_tags.append(existing_tag)
 
         else:
-            new_tag = TagsModel(name=name)
+            new_tag = TagsModel(name=name, user_id=tag.user_id)
             db.add(new_tag)
             await db.commit()
             await db.refresh(new_tag)
@@ -97,8 +97,8 @@ async def create_tags(db: AsyncSession, tags: List[DomainTag]):
 
     return [domain_tag_to_db_model(tag) for tag in saved_tags]
 
-async def get_tags_list(db: AsyncSession):
-    result = await db.execute(select(TagsModel))
+async def get_tags_list(db: AsyncSession, user_id:UUID):
+    result = await db.execute(select(TagsModel).where(TagsModel.user_id==user_id))
     tags_objs = result.scalars().all()
     return [db_tag_to_domain_tag(tag) for tag in tags_objs]
 

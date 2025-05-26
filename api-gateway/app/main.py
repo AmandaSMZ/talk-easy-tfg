@@ -1,78 +1,54 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 import os
 from dotenv import load_dotenv
 import httpx
-from app.proxy import proxy_request
+from pydantic import BaseModel
+from app.proxy import INTERNAL_TOKEN, proxy_request
+from fastapi import WebSocket, WebSocketDisconnect
+import websockets
+import asyncio
+from services.auth_token import get_current_user
+from service import TALKEASY_API_URL, get_available_tags, request_tags
 
 load_dotenv()
 
-AUTH_API_URL = os.getenv('AUTH_API_URL')
-#TALKEASY_API_URL = os.getenv('TALKEASY_API_URL')
+AUTH_API_URL = "http://auth-api:8000/auth/me"
+MESSAGES_API_URL = "http://talkeasy-api:8002"
+INTERNAL_SECRET = "tu_token_super_secreto"
 
 app = FastAPI(title="API Gateway", version="1.0")
 
-PUBLIC_ROUTES = [
-    "/auth/register",
-    "/auth/login",
-]
-
-async def verify_token(request: Request):
-
-    if request.url.path in PUBLIC_ROUTES:
-        return True
-    
-    auth_header = request.headers.get("Authorization")
-
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
+@app.websocket("/talk")
+async def talk_to_talkeasy(
+    client_ws: WebSocket,
+    user = Depends(get_current_user)
+):
+    await client_ws.accept()
+    user_id = str(user["id"])
+    talkeasy_url = (
+      f"ws://talk_easy:8000/ws"
+      f"?token={INTERNAL_SECRET}"
+      f"&user_id={user_id}"
+    )
     try:
-        async with httpx.AsyncClient() as client:
-            verify_response = await client.get(
-                f"{AUTH_API_URL}/auth/me",
-                headers={"Authorization": auth_header}
-            )
+        async with ws_connect(talkeasy_url) as srv_ws:
+            # Bucle único: del microservicio → al cliente
+            while True:
+                msg = await srv_ws.recv()         # recibe de TalkEasy
+                await client_ws.send_text(msg)    # envía al cliente
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await client_ws.close()
 
-            if verify_response.status_code == 401:
-                raise HTTPException(
-                    status_code=401,
-                    detail="Could not validate credentials",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            
-            elif verify_response.status_code == 404:
-                raise HTTPException(
-                    status_code=404,
-                    detail="User not found"
-                )
-            
-            elif verify_response.status_code != 200:
-                raise HTTPException(
-                    status_code=verify_response.status_code,
-                    detail="Authentication service error"
-                )
-            
-            return verify_response
+'''
+@app.api_route("/messages/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def messages_proxy(request: Request, path: str, user = Depends(get_current_user)):
+    return await proxy_request(request, base_url=MESSAGES_API_URL, user=user)
+'''
 
-    except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=503,
-            detail="Error validating token with authentication service"
-        )
 
-@app.api_route("/auth/{path:path}", methods=["GET", "POST"])
-async def auth_proxy(request: Request):
-    
-    if request.url.path not in PUBLIC_ROUTES:
-        user_info = await verify_token(request)
-        if not user_info:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid or expired token"
-            )
-           
-    return await proxy_request(request, base_url=AUTH_API_URL)
+
+
+
+

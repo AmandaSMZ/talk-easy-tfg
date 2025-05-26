@@ -28,17 +28,22 @@ def domain_to_schema_message(domain_msg: DomainMessage) -> MessageOut:
 
 # TagsModel --> TagDomain
 def db_tag_to_domain_tag(db_tag: TagsModel) -> DomainTag:
-    return DomainTag(id=db_tag.id, name=db_tag.name)
+    return DomainTag(
+        id=db_tag.id, 
+        name=db_tag.name,
+        user_id=db_tag.user_id
+        )
 
 # TagDomain --> TagSchema
 def domain_tag_to_schema_tag(domain_tag: DomainTag) -> Tag:
     return Tag(id=domain_tag.id, name=domain_tag.name)
 
-#TagModel -> TagDomain
+#TagDomain -> TagModel
 def domain_tag_to_db_model(domain_tag: DomainTag) -> TagsModel:
     return TagsModel(
         id=domain_tag.id,
-        name=domain_tag.name
+        name=domain_tag.name,
+        user_id=domain_tag.user_id
     )
 
 

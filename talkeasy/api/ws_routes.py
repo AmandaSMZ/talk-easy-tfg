@@ -9,8 +9,14 @@ ws_router = APIRouter()
 async def websocket_endpoint(websocket: WebSocket):
     secret = websocket.query_params.get("token")
     user_id_str: str = websocket.query_params.get('user_id')
+
+    try:
+        user_id = UUID(user_id_str)
+    except Exception:
+        await websocket.close(code=1008)
+        return
+    
     if not secret or not verify_ws_token(secret):
-        
         await websocket.close(code=1008)
         return
     

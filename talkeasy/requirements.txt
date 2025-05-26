@@ -8,3 +8,4 @@ fastapi-users[sqlalchemy2]
 asyncpg
 python-dotenv
 python-jose
+passlib
