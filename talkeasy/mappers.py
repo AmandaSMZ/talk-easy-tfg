@@ -42,6 +42,7 @@ def domain_tag_to_db_model(domain_tag: DomainTag) -> TagsModel:
     )
 
 
+
 # MessageModel --> DomainMessage
 def db_message_to_domain(
     db_msg: MessageModel, 
