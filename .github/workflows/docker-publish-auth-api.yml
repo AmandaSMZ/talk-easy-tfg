@@ -3,7 +3,7 @@ name: Build and Push Docker Image for AuthAPI
 on:
   push:
     branches:
-      - auth
+      - talkeasy
 
 jobs:
   build:
