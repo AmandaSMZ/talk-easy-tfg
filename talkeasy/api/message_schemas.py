@@ -3,24 +3,25 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
-class MessageIn(BaseModel):
-    to_user_id: UUID
-    content: str
-
-
-class MessageOutSender(BaseModel):
-    content: str
-    timestamp: datetime
-    tags: Optional[list[str]] = None
-
-
-class MessageOut(MessageIn):
-    id: UUID
-    timestamp: datetime
-    tags: Optional[list[str]] = None
 
 class TagIn(BaseModel):
     name: str
 
-class TagsIn(BaseModel):
-    tags: List[TagIn]
+class Tag(TagIn):
+    id: UUID
+
+class Tags(BaseModel):
+    tags: List[Tag]
+
+class Message(BaseModel):
+    to_user_id: UUID
+    content: str
+
+class MessageIn(Message):
+    tags: Optional[list[str]] = None
+
+class MessageOut(Message):
+    id: UUID
+    timestamp: datetime
+    tags: Optional[List[Tag]] = None
+

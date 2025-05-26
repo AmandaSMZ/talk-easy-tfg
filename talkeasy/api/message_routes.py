@@ -1,16 +1,24 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from infraestructure.db.utils import get_db
-from api.message_schemas import MessageIn, MessageOut, MessageOutSender, TagsIn
-from domain.message_usecase import get_chat_between_users, send_message
-from mappers import msgModel_to_msgOutSchema
+from api.message_schemas import MessageIn, MessageOut, Tag, TagIn, Tags
+from domain.message_usecase import create_tags_use_case, get_chat_between_users, get_tags, send_message
+from infraestructure.auth.dependencies import get_current_user, verify_internal_token_only
+from infraestructure.db.models import TagsModel
 from infraestructure.db.repository import create_tags
-from infraestructure.auth.dependencies import get_current_user
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_internal_token_only)])
 
-@router.post("/send", response_model=MessageOutSender, status_code=status.HTTP_201_CREATED)
-async def send_message_route(msg: MessageIn, db: Session = Depends(get_db), user = Depends(get_current_user)):
+@router.post(
+        "/send", 
+        response_model=MessageOut, 
+        status_code=status.HTTP_201_CREATED)
+async def send_message_route(
+    msg: MessageIn, 
+    db: AsyncSession = Depends(get_db), 
+    user = Depends(get_current_user)
+):
     return await send_message(db, msg, user['id'])
 
 @router.get(
@@ -18,21 +26,27 @@ async def send_message_route(msg: MessageIn, db: Session = Depends(get_db), user
     response_model=list[MessageOut],
     summary="Get conversation with another user"
 )
-def get_chat(
+async def get_chat(
     with_user: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     last_id: int = None,
     user = Depends(get_current_user)
 ):
-    messages = get_chat_between_users(db, user['id'], with_user, last_id)
-    
-    return [msgModel_to_msgOutSchema(msg) for msg in messages]
+    return await get_chat_between_users(db, user['id'], with_user, last_id)
 
-@router.post("/tags", status_code=status.HTTP_201_CREATED)
-def create_tags_route(tags_in: TagsIn, db: Session = Depends(get_db)):
-    if not tags_in.tags:
+
+@router.post("/tags/add", status_code=status.HTTP_201_CREATED)
+async def create_tags_route(
+    tags_in: List[TagIn],
+    db: AsyncSession = Depends(get_db)
+):
+    if not tags_in:
         raise HTTPException(status_code=400, detail="La lista de etiquetas está vacía")
     
-    tag_names = [tag.name for tag in tags_in.tags]
-    saved_tags = create_tags(db, tag_names)
-    return {"created_tags": [tag.name for tag in saved_tags]}
+    return await create_tags_use_case(db, tags_in)
+
+
+@router.get("/tags/available", response_model=list[Tag])
+async def get_available_tags_route(db: AsyncSession = Depends(get_db)):
+    return await get_tags(db)
+    

@@ -1,6 +1,10 @@
-from infraestructure.db.config import Base, engine
-from infraestructure.db import models
+import asyncio
+from infraestructure.db.config import Base, engine  # tu AsyncEngine
+from infraestructure.db.models import MessageModel, MessageTagModel, TagsModel
+
+async def init_models():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 if __name__ == "__main__":
-    Base.metadata.create_all(bind=engine)
-    print("Tablas creadas correctamente.")
+    asyncio.run(init_models())

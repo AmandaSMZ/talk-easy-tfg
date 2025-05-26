@@ -19,3 +19,13 @@ async def request_tags(content: str, tags: list[str]) -> list[str]:
         except ValueError:
             
             return []
+        
+TALKEASY_API_URL = "http://talkeasy-api:8002"
+
+async def get_available_tags() -> list[str]:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{TALKEASY_API_URL}/tags/available")
+        response.raise_for_status()
+        return response.json()
+    
+

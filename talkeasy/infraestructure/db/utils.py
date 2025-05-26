@@ -1,8 +1,5 @@
-from infraestructure.db.config import SessionLocal
+from infraestructure.db.config import AsyncSessionLocal
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
