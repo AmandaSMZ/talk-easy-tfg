@@ -1,99 +1,148 @@
-from typing import List
-from sqlalchemy.orm import Session
-from .models import MessageModel, MessageTagModel, TagsModel
-from domain.message_domain import DomainMessage
-from mappers import db_models_to_domain
+from typing import List, Optional
+from uuid import UUID
+from sqlalchemy import and_, case, func, or_
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-def save_new_message(db: Session, domain_msg) -> tuple:
-    db_msg = MessageModel(
-        from_user_id=domain_msg.from_user_id,
-        to_user_id=domain_msg.to_user_id,
-        content=domain_msg.content,
-    )
+from domain.message_domain import DomainConversation, DomainTag
+from infraestructure.db.models import Conversation, MessageModel, MessageTagModel, TagsModel
+from mappers import db_message_to_domain, db_tag_to_domain_tag, domain_message_to_db_model, domain_tag_to_db_model
+
+async def save_new_message(db: AsyncSession, domain_msg):
+
+    db_msg = domain_message_to_db_model(domain_msg)
+
     db.add(db_msg)
-    db.commit()
-    db.refresh(db_msg)
-    tags_id = [tag.id for tag in db.query(TagsModel).filter(TagsModel.name.in_(domain_msg.tags)).all()]
+    await db.commit()
+    await db.refresh(db_msg)
 
-    update_message_tags(db,db_msg.id, tags_id)
+    domain_tags_id = domain_msg.tags or []
+    if domain_tags_id:
+        await update_message_tags(db, db_msg.id, domain_tags_id)
+
+    result = await db.execute(select(TagsModel).where(TagsModel.id.in_(domain_msg.tags or [])))
+    tags = result.scalars().all()
+
+    return db_message_to_domain(db_msg,tags)
+    
+
+async def update_message_tags(db: AsyncSession, msg_id:UUID, tags: list[UUID]):
+
+    tag_objs = [
+        MessageTagModel(message_id=msg_id, tag_id=tag_id) 
+        for tag_id in tags
+        ]
+    
+    db.add_all(tag_objs)
+    await db.commit()
 
 
+async def get_chat_messages(db: AsyncSession, user1: UUID, user2: UUID, last_id: Optional[UUID] = None):
 
-    return db_models_to_domain(db_msg, get_tags_from_id_list(db, tags_id))
-
-def update_message_tags(db: Session, msg_id:int, tags: list[int]):
-     
-    tag_objs = []
-    for tag_id in tags:
-        db_tag = MessageTagModel(message_id=msg_id, tag_id=tag_id)
-        db.add(db_tag)
-        tag_objs.append(db_tag)
-    db.commit()
-
-    return tag_objs
-
-def get_tags_from_id_list(db:Session, tag_ids:list[int]):
-    if not tag_ids:
-        return []
-    tags = db.query(TagsModel).filter(TagsModel.id.in_(tag_ids)).all()
-    return [tag.name for tag in tags]
-
-def get_tags_list(db: Session):
-    tags_objs = db.query(TagsModel).all()
-    possible_tags = [tag.name for tag in tags_objs]
-    return possible_tags
-
-def get_chat_messages(db: Session, user1: str, user2: str, last_id = None):
-
-    query = (
-        db.query(MessageModel)
-        .filter(
-            ((MessageModel.from_user_id == user1) & (MessageModel.to_user_id == user2)) |
-            ((MessageModel.from_user_id == user2) & (MessageModel.to_user_id == user1))
+    stmt = select(MessageModel).where(
+        or_(
+            and_(MessageModel.from_user_id == user1, MessageModel.to_user_id == user2),
+            and_(MessageModel.from_user_id == user2, MessageModel.to_user_id == user1)
         )
     )
+    if last_id:
 
-    if last_id is not None:
-        query = query.filter(MessageModel.id > last_id)
+        subq = (
+      select(MessageModel.timestamp)
+      .where(MessageModel.id == last_id)
+      .scalar_subquery()
+    )
+        stmt = stmt.where(MessageModel.timestamp > subq)
 
-    query = query.order_by(MessageModel.timestamp)
+    stmt = stmt.order_by(MessageModel.timestamp)
+    res = await db.execute(stmt)
+    messages = res.scalars().all()
     result = []
-
-    for msg in query.all():
-
-        tag_ids = [ tag_rel.tag_id for tag_rel in db.query(MessageTagModel).filter_by(message_id=msg.id).all()]
-
-        tag_objs = []
-
+    for msg in messages:
+        tag_rel_result = await db.execute(select(MessageTagModel.tag_id).where(MessageTagModel.message_id == msg.id))
+        tag_ids = tag_rel_result.scalars().all()
+        print(tag_ids)
+        tags = []
         if tag_ids:
-            tag_objs = db.query(TagsModel).filter(TagsModel.id.in_(tag_ids)).all()
+            tag_result = await db.execute(select(TagsModel).where(TagsModel.id.in_(tag_ids)))
+            tags = tag_result.scalars().all()
 
-        tags=[t.name for t in tag_objs]
-
-        domain_msg = db_models_to_domain(msg, tags)
-
+        domain_msg = db_message_to_domain(msg, tags)
         result.append(domain_msg)
 
     return result
 
 
-def create_tags(db: Session, tags: List[str]):
+async def create_tags(db: AsyncSession, tags: List[DomainTag]):
 
     saved_tags = []
-    for tag_name in tags:
-        tag_name = tag_name.strip()
-        if not tag_name:
+    for tag in tags:
+        name = tag.name.strip()
+
+        if not name:
             continue
 
-        existing_tag = db.query(TagsModel).filter(TagsModel.name == tag_name).first()
+        existing_tag_result = await db.execute(select(TagsModel).where(TagsModel.name == name))
+        existing_tag = existing_tag_result.scalars().first()
 
         if existing_tag:
             saved_tags.append(existing_tag)
 
         else:
-            new_tag = TagsModel(name=tag_name)
+            new_tag = TagsModel(name=name)
             db.add(new_tag)
-            db.commit()
-            db.refresh(new_tag)
+            await db.commit()
+            await db.refresh(new_tag)
             saved_tags.append(new_tag)
-    return saved_tags
+
+    return [domain_tag_to_db_model(tag) for tag in saved_tags]
+
+async def get_tags_list(db: AsyncSession):
+    result = await db.execute(select(TagsModel))
+    tags_objs = result.scalars().all()
+    return [db_tag_to_domain_tag(tag) for tag in tags_objs]
+
+async def get_name_tags_from_ids(db:AsyncSession, tag_ids:list[UUID]) -> list[str]:
+    if not tag_ids:
+        return []
+    result = await db.execute(select(TagsModel).where(TagsModel.id.in_(tag_ids)))
+    tags = result.scalars().all()
+    return [tag.name for tag in tags]
+
+
+async def get_tag_ids_by_names(db: AsyncSession, tag_names: list[str]) -> list[UUID]:
+
+    result = await db.execute(select(TagsModel).where(TagsModel.name.in_(tag_names)))
+    tag_objs = result.scalars().all()
+    return [tag.id for tag in tag_objs]
+
+async def create_conversation_if_not_exists(db, user1: UUID, user2: UUID) -> None:
+
+        u1, u2 = sorted([user1, user2], key=str)
+
+        conv = Conversation(user1_id=u1, user2_id=u2)
+
+        await db.merge(conv)
+
+        await db.commit()
+
+async def list_interlocutors(db, me: UUID) -> List[UUID]:
+
+    stmt = select(Conversation).where(
+            or_(Conversation.user1_id == me,
+            Conversation.user2_id == me)
+        )
+    res = await db.execute(stmt)
+    rows = res.scalars().all()
+
+    out: List[str] = []
+
+    for conversation in rows:
+        print('-------------------------------')
+        print(conversation.user1_id)
+        print('-------------------------------')
+        print(conversation.user2_id)
+        print('-------------------------------')
+        out.append(conversation.user2_id if conversation.user1_id == me else conversation.user1_id)
+
+    return out
