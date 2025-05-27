@@ -26,7 +26,7 @@ async def login_user(user_repo: UserRepository, user_data: UserCredentials) -> D
     if not user or not verify_password(user_data.password, user.hashed_password):
         return None
 
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(user.id), "email": str(user.email)})
         
     return {
         "access_token": token,

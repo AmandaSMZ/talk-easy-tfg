@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from infraestructure.db.utils import get_db
 from api.message_schemas import Conversation, MessageIn, MessageOut, Tag, TagIn
 from domain.message_usecase import create_tags_use_case, get_chat_between_users, get_tags, list_conversations_use_case, send_message
-from infraestructure.auth.dependencies import get_current_user, verify_internal_token_only
+from infraestructure.auth.dependencies import get_current_user
 
-router = APIRouter(dependencies=[Depends(verify_internal_token_only)])
+router = APIRouter()
 
 @router.post(
         "/messages/send", 
@@ -20,7 +20,7 @@ async def send_message_route(
     db: AsyncSession = Depends(get_db), 
     user = Depends(get_current_user)
 ):
-    return await send_message(db, msg, user['id'])
+    return await send_message(db, msg, user['user_id'])
 
 @router.get(
     "/messages/chat/{with_user}",
@@ -33,7 +33,7 @@ async def get_chat(
     last_id: UUID = None,
     user = Depends(get_current_user)
 ):
-    return await get_chat_between_users(db, user['id'], with_user, last_id)
+    return await get_chat_between_users(db, user['user_id'], with_user, last_id)
 
 
 @router.post(
@@ -49,7 +49,7 @@ async def create_tags_route(
     if not tags_in:
         raise HTTPException(status_code=400, detail="La lista de etiquetas está vacía")
     
-    return await create_tags_use_case(db, tags_in, user['id'])
+    return await create_tags_use_case(db, tags_in, user['user_id'])
 
 
 @router.get(
@@ -60,9 +60,10 @@ async def get_available_tags_route(
     db: AsyncSession = Depends(get_db),
     user = Depends(get_current_user)
     ):
-    tags = await get_tags(db, user['id'])
+    tags = await get_tags(db, user['user_id'])
     if not tags:
         raise HTTPException(status_code=400, detail="La lista de etiquetas está vacía")
+    return tags
 
 
 @router.get(
@@ -74,4 +75,4 @@ async def list_conversations_route(
     db: AsyncSession = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    return await list_conversations_use_case(db, user["id"])
+    return await list_conversations_use_case(db, user["user_id"])

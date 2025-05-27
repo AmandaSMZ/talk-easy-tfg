@@ -1,32 +1,28 @@
-from uuid import UUID
-from fastapi import Header, HTTPException
-from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, ExpiredSignatureError, jwt
+from config import settings
 
-INTERNAL_SECRET = "bcrypt$$2b$12$BWzluYdeH7wC6TPzkzHILeIb.b86ccX88tOzCdlsgNx8LPuVCehcK"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-MESSAGE_FORBIDDEN = "Access forbidden: Invalid internal token"
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+            )
+        return {"user_id": user_id, "email": payload.get("email")}
 
-
-pwd_context = CryptContext(
-    schemes=["django_bcrypt"], 
-    deprecated="auto",
-    bcrypt__rounds=12,
-    bcrypt__ident="2b")
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_current_user(
-    x_user_id: UUID = Header(...),
-    x_username: str = Header(default=None)):
-    return {"id": x_user_id, "username": x_username}
-
-
-def verify_internal_token_only(x_internal_token: str = Header(...)):
-    
-    if not verify_password(x_internal_token, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail=MESSAGE_FORBIDDEN)
-    
-def verify_ws_token(token):
-    return verify_password(token, INTERNAL_SECRET)
-    
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )

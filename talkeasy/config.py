@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from functools import lru_cache
@@ -11,24 +10,23 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
 
     JWT_ALGORITHM: str = "RS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    PUBLIC_KEY_PATH: str = "public_key.pem"
 
-    PRIVATE_KEY_PATH: str = "private_key.pem"
-
+    @property
+    def JWT_SECRET_KEY(self) -> bytes:
+        return Path(self.PUBLIC_KEY_PATH).read_bytes()
+    
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
-    @property
-    def JWT_SECRET_KEY(self) -> bytes:
-        return Path(self.PRIVATE_KEY_PATH).read_bytes()
-
     class Config:
         env_file = ".env"
-        
-# guardao una instancia de settings, para no crear una instancia cada vez que se llama a get_settings()
+
 @lru_cache()
 def get_settings():
     return Settings()
 
 settings = get_settings()
+
+
