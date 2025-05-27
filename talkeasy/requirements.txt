@@ -9,3 +9,4 @@ asyncpg
 python-dotenv
 python-jose
 passlib
+pydantic-settings

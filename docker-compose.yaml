@@ -6,11 +6,10 @@ services:
     image: postgres:15
     env_file:
       - ./auth-api/.env
-    ports:
-      - 5432:5432
     volumes:
-      - auth-data:/var/lib/postgresql/data
-
+      - pgdata-auth:/var/lib/postgresql/data
+    networks:
+      - internal
 
 
   auth-api:
@@ -25,38 +24,56 @@ services:
     volumes:
       - ./auth-api:/code
       - ./wait-for-it.sh:/code/wait-for-it.sh
-    ports:
-      - 8000:8000
-
+    working_dir:
+      /code
+    networks:
+      - internal
   
   tagging-api:
     container_name: tagging-api
     image: tagging-api
     restart: unless-stopped
+    env_file:
+      - ./tagging-api/.env
     build: 
-      context: ./taggingAPI
+      context: ./tagging-api
     volumes:
-      - ./taggingAPI/app:/app 
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - ./wait-for-it.sh:/code/wait-for-it.sh
+      - ./tagging-api:/code
+    depends_on:
+      - tagging-db
+    command:
+      sh -c "./wait-for-it.sh tagging-db:5432 --strict --timeout=60 -- python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - internal
+    ports:
+      - 8005:8000
+
+  tagging-db:
+    image: postgres:15
+    container_name: tagging-db
+    restart: unless-stopped
+    env_file:
+      - ./tagging-api/.env
+    volumes:
+      - pgdata-tagging:/var/lib/postgresql/data
     networks:
       - internal
 
-
   talkeasy-db:
     image: postgres:15
-    container_name: talkeasy_postgres
+    container_name: talkeasy-db
     restart: unless-stopped
     env_file:
       - ./talkeasy/.env
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata-talkeasy:/var/lib/postgresql/data
     networks:
       - internal
 
-
   talkeasy-api:
     build: ./talkeasy/
-    container_name: talkeasy_api
+    container_name: talkeasy-api
     restart: unless-stopped
     depends_on:
       - talkeasy-db
@@ -65,14 +82,15 @@ services:
     volumes:
       - ./wait-for-it.sh:/code/wait-for-it.sh
       - ./talkeasy/:/code
+    working_dir:
+      /code
     networks:
       - internal
 
-
-  gateway:
+  gateway-api:
     build:
       context: ./api-gateway
-    container_name: gateway-talkeasy
+    container_name: gateway-api
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -83,17 +101,20 @@ services:
     environment:
       - AUTH_API_URL=http://auth-api:8000
       - TALKEASY_API_URL=http://talkeasy-api:8000
+      - TAGGING_API_URL=http://tagging-api:8000
     volumes:
       - ./api-gateway/:/code
     command: 
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    working_dir:
+      /code
     networks:
       - internal
 
-
 volumes:
-  pgdata:
-  auth-data:
+  pgdata-tagging:
+  pgdata-talkeasy:
+  pgdata-auth:
 
 networks:
   internal:

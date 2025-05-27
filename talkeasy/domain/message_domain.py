@@ -10,18 +10,11 @@ class DomainMessage:
         self.to_user_id = to_user_id
         self.content = content
         self.timestamp = timestamp
-        self.tags : List[DomainTag] = tags or []
+        self.tags : List[UUID] = tags or []
         self.is_read = is_read
 
-@dataclass
-class DomainTag:
-    def __init__(self, name: str, id: UUID = None, user_id=UUID):
-        self.id = id
-        self.name = name
-        self.user_id = user_id
 
 @dataclass
 class DomainConversation:
-    def __init__(self, with_user:UUID, last_message:DomainMessage):
+    def __init__(self, with_user:UUID):
         self.with_user = with_user
-        self.last_message = last_message

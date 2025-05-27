@@ -23,7 +23,7 @@ async def login_user(user_repo: UserRepository, user_data: UserCredentials) -> D
 
     user = await user_repo.get_user_by_email(user_data.email)
 
-    if not user or not verify_password(user_data.password, user.hashed_password):
+    if not user or not verify_password(user_data.password, user.hashed_password) or not user.is_active:
         return None
 
     token = create_access_token({"sub": str(user.id), "email": str(user.email)})

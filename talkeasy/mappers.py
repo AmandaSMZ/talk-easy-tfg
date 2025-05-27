@@ -1,6 +1,6 @@
 from uuid import UUID
 from domain.message_domain import DomainMessage, DomainTag
-from infraestructure.db.models import MessageModel, TagsModel
+from infraestructure.db.models import MessageModel
 from api.message_schemas import MessageIn, MessageOut, Tag
 
 # MessageIn --> MessageDomain
@@ -25,27 +25,6 @@ def domain_to_schema_message(domain_msg: DomainMessage) -> MessageOut:
         timestamp=domain_msg.timestamp,
         tags=tags
     )
-
-# TagsModel --> TagDomain
-def db_tag_to_domain_tag(db_tag: TagsModel) -> DomainTag:
-    return DomainTag(
-        id=db_tag.id, 
-        name=db_tag.name,
-        user_id=db_tag.user_id
-        )
-
-# TagDomain --> TagSchema
-def domain_tag_to_schema_tag(domain_tag: DomainTag) -> Tag:
-    return Tag(id=domain_tag.id, name=domain_tag.name)
-
-#TagDomain -> TagModel
-def domain_tag_to_db_model(domain_tag: DomainTag) -> TagsModel:
-    return TagsModel(
-        id=domain_tag.id,
-        name=domain_tag.name,
-        user_id=domain_tag.user_id
-    )
-
 
 
 # MessageModel --> DomainMessage

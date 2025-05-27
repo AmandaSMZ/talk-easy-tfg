@@ -1,26 +1,32 @@
-from fastapi import Request, HTTPException
-import httpx
-from app.config import AUTH_API_URL, PUBLIC_ROUTES
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, ExpiredSignatureError, jwt
+from config import settings
 
-async def get_current_user(request: Request):
-    if request.url.path in PUBLIC_ROUTES:
-        return None
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        return decode_token_and_get_user(token)
 
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.get(
-                f"{AUTH_API_URL}/users/me",
-                headers={"Authorization": auth_header},
-                timeout=10.0
-            )
-        except httpx.RequestError as e:
-            raise HTTPException(status_code=503, detail=f"Auth service unavailable: {str(e)}")
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
 
-    if resp.status_code != 200:
-        raise HTTPException(status_code=401, detail="Invalid token")
+def decode_token_and_get_user(token: str):
 
-    return resp.json()
+    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    user_id: str = payload.get("sub")
+    email: str = payload.get("email")
+
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    return {"user_id": user_id, "email": email}

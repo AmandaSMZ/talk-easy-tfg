@@ -1,6 +1,0 @@
-fastapi
-uvicorn
-transformers
-torch         # o accelerate
-pydantic
-huggingface_hub[hf_xet]

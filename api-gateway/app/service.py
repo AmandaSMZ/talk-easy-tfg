@@ -1,7 +1,6 @@
 import httpx
 
 TAGGING_API_URL = "http://tagging-api:8003/tags/available"
-TALKEASY_API_URL = "http://talkeasy-api:8002"
 
 async def request_tags(content: str, tags: list[str]) -> list[str]:
     payload = {

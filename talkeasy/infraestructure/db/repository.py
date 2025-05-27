@@ -1,12 +1,11 @@
 from typing import List, Optional
 from uuid import UUID
-from sqlalchemy import and_, case, func, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from domain.message_domain import DomainConversation, DomainTag
+from domain.message_domain import DomainConversation
 from infraestructure.db.models import Conversation, MessageModel, MessageTagModel, TagsModel
-from mappers import db_message_to_domain, db_tag_to_domain_tag, domain_message_to_db_model, domain_tag_to_db_model
+from mappers import db_message_to_domain, domain_message_to_db_model
 
 async def save_new_message(db: AsyncSession, domain_msg):
 
@@ -73,49 +72,6 @@ async def get_chat_messages(db: AsyncSession, user1: UUID, user2: UUID, last_id:
     return result
 
 
-async def create_tags(db: AsyncSession, tags: List[DomainTag]):
-
-    saved_tags = []
-    for tag in tags:
-        name = tag.name.strip()
-
-        if not name:
-            continue
-
-        existing_tag_result = await db.execute(select(TagsModel).where(TagsModel.name == name))
-        existing_tag = existing_tag_result.scalars().first()
-
-        if existing_tag:
-            saved_tags.append(existing_tag)
-
-        else:
-            new_tag = TagsModel(name=name, user_id=tag.user_id)
-            db.add(new_tag)
-            await db.commit()
-            await db.refresh(new_tag)
-            saved_tags.append(new_tag)
-
-    return [domain_tag_to_db_model(tag) for tag in saved_tags]
-
-async def get_tags_list(db: AsyncSession, user_id:UUID):
-    result = await db.execute(select(TagsModel).where(TagsModel.user_id==user_id))
-    tags_objs = result.scalars().all()
-    return [db_tag_to_domain_tag(tag) for tag in tags_objs]
-
-async def get_name_tags_from_ids(db:AsyncSession, tag_ids:list[UUID]) -> list[str]:
-    if not tag_ids:
-        return []
-    result = await db.execute(select(TagsModel).where(TagsModel.id.in_(tag_ids)))
-    tags = result.scalars().all()
-    return [tag.name for tag in tags]
-
-
-async def get_tag_ids_by_names(db: AsyncSession, tag_names: list[str]) -> list[UUID]:
-
-    result = await db.execute(select(TagsModel).where(TagsModel.name.in_(tag_names)))
-    tag_objs = result.scalars().all()
-    return [tag.id for tag in tag_objs]
-
 async def create_conversation_if_not_exists(db, user1: UUID, user2: UUID) -> None:
 
         u1, u2 = sorted([user1, user2], key=str)
@@ -138,11 +94,6 @@ async def list_interlocutors(db, me: UUID) -> List[UUID]:
     out: List[str] = []
 
     for conversation in rows:
-        print('-------------------------------')
-        print(conversation.user1_id)
-        print('-------------------------------')
-        print(conversation.user2_id)
-        print('-------------------------------')
         out.append(conversation.user2_id if conversation.user1_id == me else conversation.user1_id)
 
-    return out
+    return [DomainConversation(with_user=user) for user in out]

@@ -1,42 +1,22 @@
-from fastapi import APIRouter, FastAPI, Request, Response, HTTPException
-import httpx
+from fastapi import APIRouter, Depends, Request
+from app.dependencies import get_current_user
+from app.proxy import proxy_request
+from config import settings
 
 router = APIRouter()
 
-AUTH_API_URL = "http://auth-api:8000"
-INTERNAL_TOKEN = "tu_token_super_secreto"
-PUBLIC_ROUTES = [
-    "/messages/login",
-    "/messages/register"
-]
-client = httpx.AsyncClient()
 
-async def proxy_to_auth(request: Request):
-    url = AUTH_API_URL + request.url.path
-    if request.url.query:
-        url += "?" + request.url.query
+@router.post("/auth/login")
+async def login(request: Request):
+    body = await request.json()
+    return await proxy_request(base_url=settings.AUTH_API_URL, method="POST", endpoint="auth/login", expected_status_code=200, body=body)
 
-    headers = dict(request.headers)
-    headers.pop("host", None)
+@router.post("/auth/register")
+async def register(request: Request):
+    body = await request.json()
+    return await proxy_request(base_url=settings.AUTH_API_URL, method="POST", endpoint="auth/register", expected_status_code=201, body=body)
 
-    body = await request.body()
-
-    try:
-        resp = await client.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=body,
-            timeout=10.0
-        )
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Error connecting to auth-api: {e}")
-
-    return Response(content=resp.content, status_code=resp.status_code, headers=resp.headers)
-
-@app.api_route("/register", methods=["POST"])
-@app.api_route("/login", methods=["POST"])
-@app.api_route("/me", methods=["GET"])
-@app.api_route("/users/search/{email}", methods=["GET"])
-async def auth_gateway(request: Request):
-    return await proxy_to_auth(request)
+@router.get("/auth/me")
+async def me(user=Depends(get_current_user)):
+    headers = {"X-User-Id": user["user_id"]}
+    return await proxy_request(base_url=settings.AUTH_API_URL, method="GET", endpoint="auth/me", expected_status_code=200)

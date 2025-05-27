@@ -1,0 +1,38 @@
+from typing import List
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.api.schemas import Tag, TagIn
+from app.infraestructure.dependencies import get_current_user
+from app.infraestructure.db.db import get_db
+from app.domain.use_cases import create_tags_use_case, get_tags
+
+router = APIRouter()
+
+@router.post("/tags/add", 
+        status_code=status.HTTP_201_CREATED,
+        summary="Añade etiquetas posibles para el etiquetado de mensajes del usuario"
+        )
+async def create_tags_route(
+    tags_in: List[TagIn],
+    db: AsyncSession = Depends(get_db),
+    user_id:UUID = Depends(get_current_user)
+):
+    if not tags_in:
+        raise HTTPException(status_code=400, detail="La lista de etiquetas está vacía")
+    
+    return await create_tags_use_case(db, tags_in, user_id)
+
+
+@router.get("/tags/available", 
+        response_model=List[Tag],
+        summary="Lista todas las etiquetas que tiene configuradas el usuario")
+async def get_available_tags_route(
+    db: AsyncSession = Depends(get_db),
+    user_id:UUID = Depends(get_current_user)
+    ):
+    tags = await get_tags(db, user_id)
+    if not tags:
+        raise HTTPException(status_code=204, detail="Sin etiquetas configuradas")
+
+    return tags
