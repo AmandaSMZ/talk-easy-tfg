@@ -1,9 +1,9 @@
-name: Build and Push Docker Image for TaggingAPI
+name: Build and Push Docker Image for GatewayAPI
 
 on:
   push:
     branches:
-      - feature
+      - gateway
 
 jobs:
   build:
@@ -25,9 +25,9 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
-          context: ./tagging-api
-          file: ./tagging-api/Dockerfile
+          context: ./api-gateway
+          file: ./api-gateway/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/taggingapi:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/taggingapi:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/gateway-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/gateway-api:${{ github.sha }}
