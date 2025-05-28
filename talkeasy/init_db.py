@@ -1,7 +1,7 @@
 import asyncio
 from infraestructure.db.config import engine
 from infraestructure.db.base import Base
-from infraestructure.db.models import MessageModel, MessageTagModel, TagsModel, Conversation
+from infraestructure.db.models import MessageModel, MessageTagUserModel, Conversation
 
 async def init_models():
     async with engine.begin() as conn:
