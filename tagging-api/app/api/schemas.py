@@ -16,5 +16,5 @@ class Tag(TagOut):
     name: str
     
 class TagResponse(BaseModel):
-    from_user_tags: List[TagOut]
-    to_user_tags: List[TagOut]
+    from_user_tags: List[UUID]
+    to_user_tags: List[UUID]

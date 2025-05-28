@@ -24,9 +24,9 @@ class ZeroShotClassifierService:
                 logger.error(f"{constants.MODEL_INIT_ERROR}: {e}")
                 raise RuntimeError(constants.MODEL_KO)
 
-    def tag_message(self, request: str, tags):
+    def tag_message(self, text: str, tags):
 
-        if not request or not request.strip():
+        if not text or not text.strip():
             logger.warning(constants.MESSAGE_EMPTY)
             raise HTTPException(status_code=422, detail=constants.MESSAGE_EMPTY_FAILURE)
 
@@ -37,7 +37,7 @@ class ZeroShotClassifierService:
         logger.info(constants.PROCESSING)
 
         try:
-            result = self.model(request, tags)
+            result = self.model(text, tags)
 
         except Exception as e:
             logger.error(f"{constants.INFERENCE_ERROR}: {e}")
@@ -46,16 +46,15 @@ class ZeroShotClassifierService:
             detail=constants.INFERENCE_ERROR_MESSAGE,
             )
         
-        threshold = max(0.5, 1 / len(request.labels))
+        threshold = max(0.5, 1 / len(tags))
 
         predicted_labels = [str(label) for label, score in zip(result['labels'], result['scores']) if score >= threshold]
 
         if len(predicted_labels) == 0:
             logger.info(constants.TAGS_EMPTY)
-            raise HTTPException(status_code=204, detail=constants.TAGS_EMPTY)
+            return
         
-        labels_id = get_tag_ids_by_names(predicted_labels)
 
-        return [TagOut(id=label) for label in labels_id]
+        return predicted_labels
 
 classifier_service = ZeroShotClassifierService()

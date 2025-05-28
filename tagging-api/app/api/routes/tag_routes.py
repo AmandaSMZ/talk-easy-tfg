@@ -2,7 +2,7 @@ from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.api.schemas import Tag, TagIn
+from app.api.schemas import TagIn, Tag
 from app.infraestructure.dependencies import get_current_user
 from app.infraestructure.db.db import get_db
 from app.domain.use_cases import create_tags_use_case, get_tags

@@ -36,17 +36,17 @@ async def create_tags(db: AsyncSession, tags: List[str], user_id:UUID):
 
     return [Tag(id=tag.id, name=tag.name) for tag in saved_tags]
 
-async def get_tags_list(db: AsyncSession, user_id:UUID):
+async def get_tag_list(db:AsyncSession, user_id:UUID):
     result = await db.execute(select(TagModel).where(TagModel.user_id==user_id))
     tags_objs = result.scalars().all()
-    return [TagOut(id=tag.id) for tag in tags_objs]
+    return [Tag(name=tag.name, id=tag.id) for tag in tags_objs]
 
 async def get_name_tags_from_ids(db:AsyncSession, tag_ids:list[UUID]) -> list[str]:
     if not tag_ids:
         return []
     result = await db.execute(select(TagModel).where(TagModel.id.in_(tag_ids)))
     tags = result.scalars().all()
-    return [TagIn(name=tag.name) for tag in tags]
+    return [tag.name for tag in tags]
 
 
 async def get_tag_ids_by_names(db: AsyncSession, tag_names: list[str]) -> list[UUID]:
