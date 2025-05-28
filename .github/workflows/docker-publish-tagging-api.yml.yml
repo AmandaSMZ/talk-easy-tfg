@@ -25,8 +25,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
-          context: ./taggingAPI
-          file: ./taggingAPI/Dockerfile
+          context: ./tagging-api
+          file: ./tagging-api/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/taggingapi:latest
