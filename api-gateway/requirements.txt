@@ -2,3 +2,5 @@ fastapi
 httpx
 uvicorn
 python-dotenv
+python-jose
+pydantic_settings

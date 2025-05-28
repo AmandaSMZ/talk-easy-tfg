@@ -1,62 +1,26 @@
-import json
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+from fastapi import Request, HTTPException
 import httpx
 
-async def proxy_request(request: Request, base_url: str):
+
+async def proxy_request(
+    base_url: str,
+    method: str,
+    endpoint: str,
+    expected_status_code: int,
+    body: dict | None = None,
+    headers: dict | None = None,
+):
+    headers = headers or {}
     async with httpx.AsyncClient() as client:
-        url = f"{base_url}{request.url.path}"
-        print(f"Proxying to URL: {url}", flush=True)
-        headers = dict(request.headers)
-        headers.pop("host", None)
-        method = request.method
-        req_data = await request.body()
+        url = f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        if method.upper() == "GET":
+            response = await client.get(url, headers=headers)
+        elif method.upper() == "POST":
+            response = await client.post(url, json=body, headers=headers)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
 
-        resp = await client.request(
-            method,
-            url,
-            headers=headers,
-            content=req_data,
-            params=dict(request.query_params)
-        )
+    if response.status_code != expected_status_code:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
 
-        return JSONResponse(content=resp.json(), status_code=resp.status_code)
-    
-async def proxy_request(request: Request, base_url: str):
-    async with httpx.AsyncClient(follow_redirects=True) as client:  # Añadir follow_redirects
-        url = f"{base_url}{request.url.path}"
-        print(f"Proxying to URL: {url}")
-        
-        headers = dict(request.headers)
-        headers.pop("host", None)
-        method = request.method
-        req_data = await request.body()
-
-        try:
-            resp = await client.request(
-                method,
-                url,
-                headers=headers,
-                content=req_data,
-                params=dict(request.query_params)
-            )
-
-
-            if resp.headers.get("content-type", "").startswith("application/json"):
-                return JSONResponse(
-                    content=resp.json(),
-                    status_code=resp.status_code
-                )
-            else:
-                return Response(
-                    content=resp.content,
-                    status_code=resp.status_code,
-                    headers=dict(resp.headers)
-                )
-                
-        except json.JSONDecodeError:
-            return Response(
-                content=resp.content,
-                status_code=resp.status_code,
-                headers=dict(resp.headers)
-            )
+    return response.json()

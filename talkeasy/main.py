@@ -4,6 +4,6 @@ from api.ws_routes import ws_router
 
 app = FastAPI()
 
-app.include_router(message_router, prefix="/messages", tags=["mensaje"])
+app.include_router(message_router)
 
 app.include_router(ws_router)

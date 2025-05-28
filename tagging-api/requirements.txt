@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+transformers
+torch
+pydantic
+huggingface_hub[hf_xet]
+sqlalchemy
+pydantic_settings
+asyncpg

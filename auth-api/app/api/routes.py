@@ -36,9 +36,11 @@ async def login(
     return token
 
 @router.get("/me", response_model=UserRead)
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(user_id: User = Depends(get_current_user),
+                 repo: UserRepository = Depends(get_user_repository)):
 
-    return current_user
+    user = await repo.get_user_by_id(user_id)
+    return(UserRead(id=user.id, email=user.email, created_at=user.created_at))
 
 @router.get("/users/search/{email}", response_model=list[UserRead])
 async def search_users_route(

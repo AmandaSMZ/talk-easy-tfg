@@ -11,12 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 async def send_message(db: AsyncSession, schema: MessageIn, from_user_id: UUID):
 
-    tag_ids = await get_tag_ids_by_names(db, schema.tags or [])
+    tags_list = [tag.id for tag in schema.tags]
     domain_msg = DomainMessage(
         from_user_id=from_user_id,
         to_user_id=schema.to_user_id,
         content=schema.content,
-        tags=tag_ids
+        tags=tags_list
     )
 
     msg_saved = await save_new_message(db, domain_msg)
@@ -40,15 +40,6 @@ async def get_chat_between_users(db: AsyncSession, user1, user2, last_id=None):
     result = await get_chat_messages(db, user1, user2, last_id)
     return [domain_to_schema_message(message) for message in result]
 
-async def create_tags_use_case(db: AsyncSession, tags:List[str]):
-
-    tags_domain = [DomainTag(name=tag.name) for tag in tags]
-    created_tags = await create_tags(db,tags_domain)
-    return [Tag(name=tag.name, id=tag.id) for tag in created_tags]
-
-async def get_tags(db:AsyncSession):
-    tags = await get_tags_list(db)
-    return [domain_tag_to_schema_tag(tag) for tag in tags]
 
 async def list_conversations_use_case(
     db: AsyncSession,

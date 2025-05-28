@@ -1,4 +1,4 @@
-name: Build and Push Docker Image for AuthAPI
+name: Build and Push Docker Image for TalkEasy
 
 on:
   push:
@@ -25,9 +25,9 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
-          context: ./auth-api
-          file: ./auth-api/Dockerfile
+          context: ./talkeasy
+          file: ./talkeasy/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/auth-api:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/auth-api:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/talkeasy:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/talkeasy:${{ github.sha }}

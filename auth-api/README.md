@@ -64,7 +64,8 @@ Authorization: Bearer <token>
 ```
 ## ⚙️ Instalación y Ejecución
 1. **Prerrequisitos**
-Docker instalado en tu sistema. Descargar Docker
+    Asegúrate de tener Docker instalado en tu máquina. Puedes descargarte e instalar Docker desde su [página oficial](https://www.docker.com/).
+
 2. **Variables de Entorno**
 Crea un archivo .env:
 ```env
@@ -88,7 +89,7 @@ Crea un archivo .env:
           - auth-data:/var/lib/postgresql/data
 
     auth-api:
-        image: [tu-usuario-dockerhub]/auth-api:latest
+        image: amandasmz/auth-api:latest
         ports:
           - "8000:8000"
         depends_on:
