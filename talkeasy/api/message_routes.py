@@ -1,22 +1,22 @@
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from infraestructure.db.utils import get_db
-from api.message_schemas import Conversation, MessageIn, MessageOut, Tag, TagIn
-from domain.message_usecase import create_tags_use_case, get_chat_between_users, get_tags, list_conversations_use_case, send_message
+from api.message_schemas import Conversation, Message, MessageSender
+from domain.message_usecase import get_chat_between_users, list_conversations_use_case, send_message
 from dependencies import get_current_user
 
 router = APIRouter()
 
 @router.post(
         "/messages/send", 
-        response_model=MessageOut, 
+        response_model=MessageSender, 
         status_code=status.HTTP_201_CREATED,
         summary="Envía un mensaje a un usuario"
         )
 async def send_message_route(
-    msg: MessageIn, 
+    msg: Message, 
     db: AsyncSession = Depends(get_db), 
     user_id = Depends(get_current_user)
 ):
@@ -24,7 +24,7 @@ async def send_message_route(
 
 @router.get(
     "/messages/chat/{with_user}",
-    response_model=list[MessageOut],
+    response_model=list[Message],
     summary="Obtiene los mensajes que ha intercambiado con un usuario específico"
 )
 async def get_chat(

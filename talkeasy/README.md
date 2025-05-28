@@ -20,7 +20,7 @@ Envía un nuevo mensaje a otro usuario.
 ```json
 {
   "to_user": "uuid-del-receptor",
-  "content": "Hola, ¿cómo estás?",
+  "text": "Hola, ¿cómo estás?",
   "tag_names": ["importante", "personal"]
 }
 ```
@@ -31,7 +31,7 @@ Envía un nuevo mensaje a otro usuario.
   "id": "uuid-mensaje",
   "from_user": "uuid-emisor",
   "to_user": "uuid-receptor",
-  "content": "Hola, ¿cómo estás?",
+  "text": "Hola, ¿cómo estás?",
   "created_at": "2025-05-26T10:00:00",
   "tags": ["importante", "personal"]
 }
@@ -50,7 +50,7 @@ Authorization: Bearer <token>
 [
   {
     "id": "uuid1",
-    "content": "Hola",
+    "text": "Hola",
     "from_user": "uuidA",
     "to_user": "uuidB",
     "created_at": "2025-05-26T10:00:00",

@@ -4,7 +4,7 @@ from typing import List
 
 class TagRequest(BaseModel):
     text: str
-    to_user: UUID
+    to_user_id: UUID
 
 class TagIn(BaseModel):
     name: str

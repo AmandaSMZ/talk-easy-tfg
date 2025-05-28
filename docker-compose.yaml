@@ -11,7 +11,6 @@ services:
     networks:
       - internal
 
-
   auth-api:
     container_name: auth-api
     build:
@@ -46,8 +45,6 @@ services:
       sh -c "./wait-for-it.sh tagging-db:5432 --strict --timeout=60 -- python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
       - internal
-    ports:
-      - 8005:8000
 
   tagging-db:
     image: postgres:15

@@ -1,6 +1,20 @@
-from pydantic import BaseModel
+from typing import List, Optional
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from uuid import UUID
+
+class UserCredentials(BaseModel):
+    email: EmailStr
+    password: str
 
 class MessageIn(BaseModel):
-    from_user: str
-    to_user: str
-    content: str
+    to_user_id: str
+    text: str
+    from_user_tags: Optional[List[UUID]] = None
+    to_user_tags: Optional[List[UUID]] = None
+
+class TagIn(BaseModel):
+    name: str
+
+class Tag(TagIn):
+    id: Optional[UUID]

@@ -4,7 +4,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from domain.message_domain import DomainConversation
-from infraestructure.db.models import Conversation, MessageModel, MessageTagModel, TagsModel
+from infraestructure.db.models import Conversation, MessageModel, MessageTagUserModel
 from mappers import db_message_to_domain, domain_message_to_db_model
 
 async def save_new_message(db: AsyncSession, domain_msg):
@@ -15,21 +15,24 @@ async def save_new_message(db: AsyncSession, domain_msg):
     await db.commit()
     await db.refresh(db_msg)
 
-    domain_tags_id = domain_msg.tags or []
-    if domain_tags_id:
-        await update_message_tags(db, db_msg.id, domain_tags_id)
+    to_user_tags_id = domain_msg.to_user_tags or []
+    if to_user_tags_id:
+        await update_message_tags(db, db_msg.to_user_id, db_msg.id, to_user_tags_id)
 
-    result = await db.execute(select(TagsModel).where(TagsModel.id.in_(domain_msg.tags or [])))
-    tags = result.scalars().all()
+    from_user_tags_id = domain_msg.from_user_tags or []
+    if from_user_tags_id:
+        await update_message_tags(db,db_msg.from_user_id, db_msg.id, from_user_tags_id)
 
-    return db_message_to_domain(db_msg,tags)
+    return db_message_to_domain(db_msg=db_msg,to_user_tags=to_user_tags_id,from_user_tags=from_user_tags_id)
     
 
-async def update_message_tags(db: AsyncSession, msg_id:UUID, tags: list[UUID]):
+async def update_message_tags(db: AsyncSession,user_id:UUID, msg_id:UUID, tags: list[UUID]):
 
     tag_objs = [
-        MessageTagModel(message_id=msg_id, tag_id=tag_id) 
-        for tag_id in tags
+        MessageTagUserModel(message_id=msg_id,
+                            user_id=user_id,
+                            tag_id=tag_id) 
+                            for tag_id in tags
         ]
     
     db.add_all(tag_objs)
@@ -58,15 +61,24 @@ async def get_chat_messages(db: AsyncSession, user1: UUID, user2: UUID, last_id:
     messages = res.scalars().all()
     result = []
     for msg in messages:
-        tag_rel_result = await db.execute(select(MessageTagModel.tag_id).where(MessageTagModel.message_id == msg.id))
-        tag_ids = tag_rel_result.scalars().all()
-        print(tag_ids)
-        tags = []
-        if tag_ids:
-            tag_result = await db.execute(select(TagsModel).where(TagsModel.id.in_(tag_ids)))
-            tags = tag_result.scalars().all()
+        result_from = await db.execute(
+            select(MessageTagUserModel.tag_id).where(
+                MessageTagUserModel.message_id == msg.id,
+                MessageTagUserModel.user_id == msg.from_user_id
+            )
+        )
+        from_user_tag_ids = result_from.scalars().all()
 
-        domain_msg = db_message_to_domain(msg, tags)
+        result_to = await db.execute(
+            select(MessageTagUserModel.tag_id).where(
+                MessageTagUserModel.message_id == msg.id,
+                MessageTagUserModel.user_id == msg.to_user_id
+            )
+        )
+        to_user_tag_ids = result_to.scalars().all()
+        
+
+        domain_msg = db_message_to_domain(msg, to_user_tags=to_user_tag_ids, from_user_tags=from_user_tag_ids)
         result.append(domain_msg)
 
     return result

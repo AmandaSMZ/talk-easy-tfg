@@ -16,7 +16,7 @@ async def tag_message(request: TagRequest,
                 user_id=Depends(get_current_user)):
 
     from_user_ids = await get_message_tags(db,user_id,request.text)
-    to_user_ids = await get_message_tags(db,request.to_user,request.text)
+    to_user_ids = await get_message_tags(db,request.to_user_id,request.text)
 
 
     return TagResponse(to_user_tags=to_user_ids, from_user_tags=from_user_ids)

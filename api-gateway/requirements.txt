@@ -4,3 +4,4 @@ uvicorn
 python-dotenv
 python-jose
 pydantic_settings
+pydantic[email]
