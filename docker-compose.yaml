@@ -27,6 +27,8 @@ services:
       /code
     networks:
       - internal
+    ports:
+      - 8006:8000
   
   tagging-api:
     container_name: tagging-api

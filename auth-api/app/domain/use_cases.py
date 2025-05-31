@@ -2,10 +2,10 @@ from typing import Dict
 
 from app.security.password import verify_password
 from app.security.token import create_access_token
-from app.api.schemas import UserCredentials, UserRead
+from app.api.schemas import UserCreate, UserCredentials, UserRead
 from app.data.db.repository import UserRepository
 
-async def register_user(user_repo: UserRepository, user_data: UserCredentials) -> UserRead:
+async def register_user(user_repo: UserRepository, user_data: UserCreate) -> UserRead:
     
     new_user = await user_repo.create_user(user_data)
 
@@ -15,6 +15,7 @@ async def register_user(user_repo: UserRepository, user_data: UserCredentials) -
     return UserRead(
         id=new_user.id,
         email=new_user.email,
+        username=new_user.username,
         created_at=new_user.created_at
     )
 
@@ -30,7 +31,9 @@ async def login_user(user_repo: UserRepository, user_data: UserCredentials) -> D
         
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user_id": user.id,
+        "username": user.username
         }
 
 async def search_users(

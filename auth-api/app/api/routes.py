@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from app.api.schemas import UserRead,UserCredentials, Token
+from app.api.schemas import UserRead,UserCredentials, Token, UserCreate
 from app.domain.use_cases import register_user, login_user, search_users
 from app.data.db.repository import UserRepository
 from app.dependencies.repository import get_user_repository
@@ -8,11 +9,11 @@ from app.data.db.models import User
 from app.dependencies.auth import get_current_user
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 @router.post("/register",status_code=status.HTTP_201_CREATED, response_model=UserRead)
 async def register(
-    user: UserCredentials, 
+    user: UserCreate, 
     user_repo: UserRepository = Depends(get_user_repository)
     ):
     new_user = await register_user(user_repo, user)
@@ -42,10 +43,11 @@ async def get_me(user_id: User = Depends(get_current_user),
     user = await repo.get_user_by_id(user_id)
     return(UserRead(id=user.id, email=user.email, created_at=user.created_at))
 
-@router.get("/users/search/{email}", response_model=list[UserRead])
+@router.get("/search/{email}")
 async def search_users_route(
     email: str,
-    _: User = Depends(get_current_user),  # solo verifico que el usuario está autenticado, aunque no lo uso
+    _: User = Depends(get_current_user),
     user_repo: UserRepository = Depends(get_user_repository)
 ):
+    return JSONResponse(content='mierda',status_code=200)
     return await search_users(email, user_repo)

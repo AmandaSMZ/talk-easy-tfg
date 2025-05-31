@@ -1,3 +1,6 @@
+import json
+from typing import List
+from uuid import UUID
 from fastapi import APIRouter, status, Depends
 from app.dependencies import get_current_user
 from app.api.schemas import MessageIn
@@ -21,6 +24,8 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
         body=body,
         headers=headers
     )
+    result = json.loads(result.body)
+
 
     body['to_user_tags'] = result['to_user_tags']
     body['from_user_tags'] = result['from_user_tags']
@@ -57,6 +62,20 @@ async def proxy_list_conversations(user=Depends(get_current_user)):
         base_url=settings.TALKEASY_API_URL,
         method="GET",
         endpoint="conversations",
+        expected_status_code=200,
+        headers=headers
+    )
+
+@router.get(
+    "/messages/by-tag/{tag_id}",
+    summary="Obtiene mensajes por etiqueta para el usuario autenticado"
+)
+async def proxy_get_messages_by_tag(tag_id: UUID, user=Depends(get_current_user)):
+    headers = user_headers(user)
+    return await proxy_request(
+        base_url=settings.TALKEASY_API_URL,
+        method="GET",
+        endpoint=f"messages/by-tag/{tag_id}",
         expected_status_code=200,
         headers=headers
     )

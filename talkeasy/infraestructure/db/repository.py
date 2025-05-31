@@ -1,6 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from domain.message_domain import DomainConversation
@@ -103,9 +104,49 @@ async def list_interlocutors(db, me: UUID) -> List[UUID]:
     res = await db.execute(stmt)
     rows = res.scalars().all()
 
-    out: List[str] = []
+    out: List[UUID] = []
 
     for conversation in rows:
         out.append(conversation.user2_id if conversation.user1_id == me else conversation.user1_id)
 
     return [DomainConversation(with_user=user) for user in out]
+
+async def get_messages_by_tag(db: AsyncSession, tag_id: UUID, user_id: UUID):
+    result = await db.execute(
+        select(MessageModel)
+        .join(MessageTagUserModel, MessageModel.id == MessageTagUserModel.message_id)
+        .where(
+            and_(
+                or_(
+                    MessageModel.from_user_id == user_id,
+                    MessageModel.to_user_id == user_id
+                ),
+                MessageTagUserModel.tag_id == tag_id,
+                MessageTagUserModel.user_id == user_id
+            )
+        )
+        .order_by(MessageModel.timestamp.desc())
+        .options(joinedload(MessageModel.message_tags))
+    )
+    messages = result.scalars().all()
+
+    domain_messages = []
+    for msg in messages:
+        # Sacamos los tags que ha puesto el usuario en ese mensaje
+        tag_result = await db.execute(
+            select(MessageTagUserModel.tag_id).where(
+                MessageTagUserModel.message_id == msg.id,
+                MessageTagUserModel.user_id == user_id
+            )
+        )
+        user_tag_ids = tag_result.scalars().all()
+
+        # Distinguimos si los tags son de from_user o to_user
+        if msg.from_user_id == user_id:
+            domain_msg = db_message_to_domain(msg, from_user_tags=user_tag_ids, to_user_tags=[])
+        else:
+            domain_msg = db_message_to_domain(msg, from_user_tags=[], to_user_tags=user_tag_ids)
+
+        domain_messages.append(domain_msg)
+
+    return domain_messages

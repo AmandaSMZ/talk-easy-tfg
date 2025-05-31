@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from infraestructure.db.utils import get_db
 from api.message_schemas import Conversation, Message, MessageSender
-from domain.message_usecase import get_chat_between_users, list_conversations_use_case, send_message
+from domain.message_usecase import get_chat_between_users, get_messages_by_tag_use_case, list_conversations_use_case, send_message
 from dependencies import get_current_user
 
 router = APIRouter()
@@ -47,3 +47,15 @@ async def list_conversations_route(
     user_id = Depends(get_current_user)
 ):
     return await list_conversations_use_case(db, user_id)
+
+@router.get(
+    "/messages/by-tag/{tag_id}",
+    response_model=List[Message],
+    summary="Devuelve todos los mensajes del usuario (enviados y recibidos) con una etiqueta específica"
+)
+async def get_messages_by_tag(
+    tag_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user)
+):
+    return await get_messages_by_tag_use_case(db, user_id, tag_id)

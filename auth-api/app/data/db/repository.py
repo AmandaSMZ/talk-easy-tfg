@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.data.db.models import User
-from app.api.schemas import UserCredentials
+from app.api.schemas import UserCredentials, UserCreate
 from app.security.password import get_password_hash
 from typing import Optional
 
@@ -22,13 +22,14 @@ class UserRepository:
         
         return result.scalar_one_or_none()
 
-    async def create_user(self, user_data: UserCredentials) -> User:
+    async def create_user(self, user_data: UserCreate) -> User:
         existing_user = await self.get_user_by_email(user_data.email)
         if existing_user:
             return None
 
         hashed_pw = get_password_hash(user_data.password)
         new_user = User(
+            username=user_data.username,
             email=user_data.email,
             hashed_password=hashed_pw
         )

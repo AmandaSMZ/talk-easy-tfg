@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from app.dependencies import get_current_user
 from app.proxy import proxy_request
@@ -30,6 +31,17 @@ async def proxy_get_available_tags(user=Depends(get_current_user)):
         base_url=settings.TAGGING_API_URL,
         method="GET",
         endpoint="tags/available",
+        expected_status_code=200,
+        headers=headers
+    )
+
+@router.delete("/tags/delete/{tag_id}")
+async def proxy_delete_tag(tag_id: UUID, user=Depends(get_current_user)):
+    headers = user_headers(user)
+    return await proxy_request(
+        base_url=settings.TAGGING_API_URL,
+        method="DELETE",
+        endpoint=f"tags/delete/{tag_id}",
         expected_status_code=200,
         headers=headers
     )

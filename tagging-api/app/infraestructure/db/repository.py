@@ -36,6 +36,19 @@ async def create_tags(db: AsyncSession, tags: List[str], user_id:UUID):
 
     return [Tag(id=tag.id, name=tag.name) for tag in saved_tags]
 
+async def delete_tag(db: AsyncSession, tag_id: UUID, user_id: UUID):
+    result = await db.execute(
+        select(TagModel).where(TagModel.id == tag_id, TagModel.user_id == user_id)
+    )
+    tag = result.scalar_one_or_none()
+    if not tag:
+        return False
+
+    await db.delete(tag)
+    await db.commit()
+    return True
+
+
 async def get_tag_list(db:AsyncSession, user_id:UUID):
     result = await db.execute(select(TagModel).where(TagModel.user_id==user_id))
     tags_objs = result.scalars().all()

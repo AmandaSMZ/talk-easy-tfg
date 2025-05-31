@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 from domain.message_domain import DomainMessage
-from infraestructure.db.repository import create_conversation_if_not_exists, get_chat_messages, list_interlocutors, save_new_message
+from infraestructure.db.repository import create_conversation_if_not_exists, get_chat_messages, get_messages_by_tag, list_interlocutors, save_new_message
 from mappers import domain_to_schema_message, domain_to_schema_message_receiver, domain_to_schema_message_sender
 from domain.message_domain import DomainMessage
 from infraestructure.websockets.connection_manager import connection_manager
@@ -47,4 +47,8 @@ async def list_conversations_use_case(
 ) -> List[Conversation]:
     result = await list_interlocutors(db, me)
     print('RESULTADO: ', result)
-    return [Conversation(id = user_id) for user_id in result]
+    return [Conversation(user_id = conv.with_user) for conv in result]
+
+async def get_messages_by_tag_use_case(db, user_id, tag_id) -> List[Message]:
+    domain_messages = await get_messages_by_tag(db, tag_id, user_id)
+    return [domain_to_schema_message(msg) for msg in domain_messages]

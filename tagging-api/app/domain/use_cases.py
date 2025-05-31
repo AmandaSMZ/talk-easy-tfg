@@ -1,6 +1,6 @@
 from typing import List
 from uuid import UUID
-from app.infraestructure.db.repository import create_tags, get_tag_ids_by_names, get_tag_list
+from app.infraestructure.db.repository import create_tags, get_tag_ids_by_names, get_tag_list, delete_tag
 from app.api.schemas import Tag
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infraestructure.service import classifier_service
@@ -9,6 +9,8 @@ async def create_tags_use_case(db: AsyncSession, tags:List[Tag], user_id):
 
     return await create_tags(db,tags, user_id)
 
+async def delete_tag_use_case(db:AsyncSession, tag_id:UUID, user_id:UUID):
+    return await delete_tag(db,tag_id,user_id)
 
 async def get_tags(db:AsyncSession, user_id:UUID):
 
@@ -25,3 +27,4 @@ async def get_message_tags(db:AsyncSession, user_id:UUID, text:str):
             return await get_tag_ids_by_names(db,from_user_response)
         
     return []
+    
