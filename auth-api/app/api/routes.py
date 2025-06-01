@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from app.api.schemas import UserRead,UserCredentials, Token, UserCreate
-from app.domain.use_cases import register_user, login_user, search_users
+from app.api.schemas import UserRead,UserCredentials, Token, UserCreate, UserSearch, UsersIdRequest
+from app.domain.use_cases import get_user_by_id, register_user, login_user, search_users, search_users_list
 from app.data.db.repository import UserRepository
 from app.dependencies.repository import get_user_repository
 from app.data.db.models import User
@@ -40,14 +42,27 @@ async def login(
 async def get_me(user_id: User = Depends(get_current_user),
                  repo: UserRepository = Depends(get_user_repository)):
 
-    user = await repo.get_user_by_id(user_id)
-    return(UserRead(id=user.id, email=user.email, created_at=user.created_at))
+    return await get_user_by_id(repo, user_id)
+    
 
-@router.get("/search/{email}")
+@router.get("/search/{email}", status_code=status.HTTP_200_OK, response_model=List[UserSearch])
 async def search_users_route(
     email: str,
     _: User = Depends(get_current_user),
     user_repo: UserRepository = Depends(get_user_repository)
 ):
-    return JSONResponse(content='mierda',status_code=200)
-    return await search_users(email, user_repo)
+    result = await search_users(email, user_repo)
+    
+    if not result:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return result
+
+@router.post("/search/users", status_code=status.HTTP_200_OK, response_model=List[UserSearch])
+async def search_users_route(
+    request: UsersIdRequest,
+    _: User = Depends(get_current_user),
+    user_repo: UserRepository = Depends(get_user_repository)
+):
+    result = await search_users_list(user_repo,request.users_id)
+    return result or []

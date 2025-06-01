@@ -11,7 +11,7 @@ class UserCreate(UserCredentials):
     username: str
 
 class UserSearch(BaseModel):
-    id:UUID
+    id: UUID
     email: EmailStr
     username: str
 
@@ -25,4 +25,4 @@ class Token(BaseModel):
     username: str
 
 class UsersIdRequest(BaseModel):
-    users_id: List[UUID]
+    users_id: List[str]

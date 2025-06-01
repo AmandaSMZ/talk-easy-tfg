@@ -1,74 +1,87 @@
+from typing import List, Optional
 from uuid import UUID
-from domain.message_domain import DomainMessage
+from domain.message_domain import DomainMessage, DomainTag
 from infraestructure.db.models import MessageModel
-from api.message_schemas import Message, MessageSender, MessageReceiver
+from api.message_schemas import MessageIn, MessageOut, Tag
 
-# MessageIn --> MessageDomain
-def schema_to_domain_message(schema: Message, from_user_id: UUID, tags_id: list[UUID] = None) -> DomainMessage:
+def tags_schema_to_domain(tags: Optional[List[Tag]]) -> List[DomainTag]:
+    if not tags:
+        return []
+    return [DomainTag(id=tag.id, name=tag.name) for tag in tags]
+
+def tags_domain_to_schema(tags: List[DomainTag]) -> List[Tag]:
+    return [Tag(id=tag.id, name=tag.name) for tag in tags]
+
+def schema_to_domain_message(msg_in: MessageIn, from_user_id: UUID) -> DomainMessage:
     return DomainMessage(
+        id=None,
         from_user_id=from_user_id,
-        to_user_id=schema.to_user_id,
-        text=schema.text,
-        tags_id=tags_id or []
+        to_user_id=msg_in.to_user_id,
+        text=msg_in.text,
+        timestamp=None,
+        from_user_tags=tags_schema_to_domain(msg_in.from_user_tags),
+        to_user_tags=tags_schema_to_domain(msg_in.to_user_tags),
+        is_read=False,
     )
 
-# MessageDomain --> MessageOut
-def domain_to_schema_message_sender(domain_msg: DomainMessage) -> MessageSender:
+def domain_to_schema_message(domain_msg: DomainMessage, current_user_id: UUID) -> MessageOut:
+    # Decide si el mensaje es enviado o recibido según current_user_id
+    msg_type = "sent" if domain_msg.from_user_id == current_user_id else "received"
+    # Elige qué tags mostrar según tipo
+    tags = domain_msg.from_user_tags if msg_type == "sent" else domain_msg.to_user_tags
 
-    return MessageSender(
+    return MessageOut(
         id=domain_msg.id,
-        to_user_id=domain_msg.to_user_id,
         text=domain_msg.text,
         timestamp=domain_msg.timestamp,
-        from_user_tags=domain_msg.from_user_tags
-    )
-def domain_to_schema_message_receiver(domain_msg: DomainMessage) -> MessageReceiver:
-
-    return MessageReceiver(
-        id=domain_msg.id,
-        from_user_id=domain_msg.from_user_id,
-        text=domain_msg.text,
-        timestamp=domain_msg.timestamp,
-        to_user_tags=domain_msg.to_user_tags
+        type=msg_type,
+        tags=tags_domain_to_schema(tags),
     )
 
-def domain_to_schema_message(domain_msg: DomainMessage) -> Message:
-
-    return Message(
-        id=domain_msg.id,
-        to_user_id=domain_msg.to_user_id,
-        from_user_id=domain_msg.from_user_id,
-        text=domain_msg.text,
-        timestamp=domain_msg.timestamp,
-        to_user_tags=domain_msg.to_user_tags,
-        from_user_tags=domain_msg.from_user_tags
-    )
-
-
-# MessageModel --> DomainMessage
-def db_message_to_domain(
-    db_msg: MessageModel, 
-    to_user_tags: list[UUID],
-    from_user_tags: list[UUID]
-    ) -> DomainMessage:
-
-    return DomainMessage(
-        id=db_msg.id,
-        from_user_id=db_msg.from_user_id,
-        to_user_id=db_msg.to_user_id,
-        text=db_msg.text,
-        timestamp=db_msg.timestamp,
-        to_user_tags=to_user_tags,
-        from_user_tags=from_user_tags,
-        is_read=bool(db_msg.is_read)
-    )
-
-# DomainMessage --> MessageModel
-def domain_message_to_db_model(domain_msg: DomainMessage) -> MessageModel:
+def domain_message_to_db_model(domain_msg) -> MessageModel:
     return MessageModel(
-        id=domain_msg.id, 
+        id=domain_msg.id or None,
         from_user_id=domain_msg.from_user_id,
         to_user_id=domain_msg.to_user_id,
         text=domain_msg.text,
+        timestamp=domain_msg.timestamp,
         is_read=domain_msg.is_read
     )
+
+def db_message_to_domain(
+    msg: MessageModel,
+    from_user_tags: list[UUID] = None,
+    to_user_tags: list[UUID] = None
+) -> DomainMessage:
+    return DomainMessage(
+        id=msg.id,
+        from_user_id=msg.from_user_id,
+        to_user_id=msg.to_user_id,
+        text=msg.text,
+        timestamp=msg.timestamp,
+        is_read=msg.is_read if msg.is_read is not None else False,
+        from_user_tags=[DomainTag(id=tag_id, name="") for tag_id in (from_user_tags or [])],
+        to_user_tags=[DomainTag(id=tag_id, name="") for tag_id in (to_user_tags or [])]
+    )
+
+def map_domain_to_message_out(messages: List[DomainMessage], user_id: UUID) -> List[MessageOut]:
+    message_out_list: List[MessageOut] = []
+
+    for msg in messages:
+        if msg.to_user_id == user_id:
+            message_type = "received"
+            tags = [Tag(id=tag.id, name='') for tag in msg.from_user_tags]
+        else:
+            message_type = "sent"
+            tags = [Tag(id=tag.id, name='') for tag in msg.to_user_tags]
+
+        message_out = MessageOut(
+            id=msg.id,
+            text=msg.text,
+            timestamp=msg.timestamp,
+            type=message_type,
+            tags=tags
+        )
+        message_out_list.append(message_out)
+
+    return message_out_list

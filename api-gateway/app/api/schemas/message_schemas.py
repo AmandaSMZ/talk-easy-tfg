@@ -1,11 +1,18 @@
-from pydantic import BaseModel
-from typing import List, Optional, Literal
-from uuid import UUID
+from typing import List, Literal, Optional
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from uuid import UUID
+
+class TagIn(BaseModel):
+    name: str
+
+class Tag(TagIn):
+    id: UUID
+
 
 class Tag(BaseModel):
     id: UUID
-    name: Optional[str] = None
+    name: str
 
     class Config:
         orm_mode = True
@@ -14,7 +21,7 @@ class MessageBase(BaseModel):
     text: str
 
 class MessageIn(MessageBase):
-    to_user_id: UUID
+    to_user_id: str
     from_user_tags: Optional[List[Tag]] = None
     to_user_tags: Optional[List[Tag]] = None
 
@@ -26,3 +33,4 @@ class MessageOut(MessageBase):
 
     class Config:
         orm_mode = True
+

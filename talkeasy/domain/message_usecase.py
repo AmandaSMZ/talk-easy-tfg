@@ -1,54 +1,68 @@
 from typing import List
 from uuid import UUID
-from domain.message_domain import DomainMessage
-from infraestructure.db.repository import create_conversation_if_not_exists, get_chat_messages, get_messages_by_tag, list_interlocutors, save_new_message
-from mappers import domain_to_schema_message, domain_to_schema_message_receiver, domain_to_schema_message_sender
-from domain.message_domain import DomainMessage
+
+from fastapi import HTTPException
+from infraestructure.db.repository.base import IMessageRepository
+from mappers import domain_to_schema_message, map_domain_to_message_out, schema_to_domain_message
 from infraestructure.websockets.connection_manager import connection_manager
-from fastapi.encoders import jsonable_encoder
-from api.message_schemas import Conversation, Message
-from sqlalchemy.ext.asyncio import AsyncSession
+from api.message_schemas import MessageIn, MessageOut, Tag
 
-async def send_message(db: AsyncSession, schema: Message, from_user_id: UUID):
+async def send_message(repo: IMessageRepository, msg_in: MessageIn, from_user_id: UUID):
+    try:
+        domain_msg = schema_to_domain_message(msg_in, from_user_id)
+        msg_saved = await repo.save_message(domain_msg)
+        await repo.create_conversation_if_not_exists(msg_saved.from_user_id, msg_saved.to_user_id)
 
-    domain_msg = DomainMessage(
-        from_user_id=from_user_id,
-        to_user_id=schema.to_user_id,
-        text=schema.text,
-        from_user_tags=schema.from_user_tags,
-        to_user_tags=schema.to_user_tags
-    )
+        msg_out_receiver = domain_to_schema_message(msg_saved, current_user_id=msg_saved.to_user_id)
+        msg_out_receiver.tags = msg_in.to_user_tags or []
 
-    msg_saved = await save_new_message(db, domain_msg)
-    
-    await create_conversation_if_not_exists(db, msg_saved.from_user_id, msg_saved.to_user_id)
+        await connection_manager.send_personal_message(
+            {
+                "type": "new_message",
+                "message": msg_out_receiver.model_dump(),
+            },
+            msg_saved.to_user_id
+        )
 
-    msg_out_receiver = domain_to_schema_message_receiver(msg_saved)
+        msg_out_sender = domain_to_schema_message(msg_saved, current_user_id=from_user_id)
+        msg_out_sender.tags = msg_in.from_user_tags or []
+        return msg_out_sender
 
-    await connection_manager.send_personal_message(
-        {
-            "type": "new_message",
-            "message": jsonable_encoder(msg_out_receiver),
-        },
-        msg_saved.to_user_id
-    )
-
-    return domain_to_schema_message_sender(msg_saved)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al enviar mensaje: {str(e)}")
 
 
-async def get_chat_between_users(db: AsyncSession, user1, user2, last_id=None):
-    result = await get_chat_messages(db, user1, user2, last_id)
-    return [domain_to_schema_message(message) for message in result]
+async def get_chat_between_users(repo: IMessageRepository, current_user:UUID, with_user_id:UUID, last_id:UUID=None):
+    messages = await repo.get_messages_by_chat(current_user, with_user_id, last_id)
+    response = []
+
+    for msg in messages:
+        msg_type = "received" if msg.to_user_id == current_user else "sent"
+
+        user_tags = msg.from_user_tags if msg_type == "sent" else msg.to_user_tags
+
+        msg_out = MessageOut(
+            id=msg.id,
+            text=msg.text,
+            timestamp=msg.timestamp,
+            type=msg_type,
+            tags=[Tag(id=tag.id, name="") for tag in user_tags],
+        )
+        response.append(msg_out)
+
+    return response
 
 
 async def list_conversations_use_case(
-    db: AsyncSession,
-    me: UUID
-) -> List[Conversation]:
-    result = await list_interlocutors(db, me)
-    print('RESULTADO: ', result)
-    return [Conversation(user_id = conv.with_user) for conv in result]
+    repo: IMessageRepository,
+    user_id: UUID
+) -> List[UUID]:
+    result = await repo.list_conversations(user_id)
+    return result
 
-async def get_messages_by_tag_use_case(db, user_id, tag_id) -> List[Message]:
-    domain_messages = await get_messages_by_tag(db, tag_id, user_id)
-    return [domain_to_schema_message(msg) for msg in domain_messages]
+async def get_messages_by_tag_use_case(repo: IMessageRepository, user_id:UUID, tag_id:UUID) -> List[MessageOut]:
+    domain_messages = await repo.get_messages_by_tag(tag_id=tag_id, user_id=user_id)
+    print('----------------------------------------------------------------------------------------')
+    print (len(domain_messages))
+    print('-----------------------------------------------------------------------------------')
+    return map_domain_to_message_out(domain_messages, user_id)

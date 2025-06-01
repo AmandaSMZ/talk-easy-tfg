@@ -1,9 +1,10 @@
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.data.db.models import User
 from app.api.schemas import UserCredentials, UserCreate
 from app.security.password import get_password_hash
-from typing import Optional
+from typing import List, Optional
 
 class UserRepository:
 
@@ -43,5 +44,11 @@ class UserRepository:
     async def search_users_by_email(self, email: str) -> list[User]:
         result = await self.db.execute(
             select(User).where(User.email.ilike(f"%{email}%"))
+        )
+        return result.scalars().all()
+    
+    async def search_users_by_ids(self, user_ids:List[UUID]) -> list[User]:
+        result = await self.db.execute(
+            select(User).where(User.id.in_(user_ids))
         )
         return result.scalars().all()

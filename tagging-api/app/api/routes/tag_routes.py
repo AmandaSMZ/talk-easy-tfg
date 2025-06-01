@@ -1,6 +1,7 @@
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas import TagIn, Tag
 from app.infraestructure.dependencies import get_current_user
@@ -21,7 +22,14 @@ async def create_tags_route(
     if not tags_in:
         raise HTTPException(status_code=400, detail="La lista de etiquetas está vacía")
     
-    return await create_tags_use_case(db, tags_in, user_id)
+    created = await create_tags_use_case(db, tags_in, user_id)
+    if not created:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Las etiquetas ya existían"
+        )
+    
+    return {"message": "Etiquetas creadas"}
 
 
 @router.get("/tags/available", 
@@ -33,7 +41,7 @@ async def get_available_tags_route(
     ):
     tags = await get_tags(db, user_id)
     if not tags:
-        raise HTTPException(status_code=204, detail="Sin etiquetas configuradas")
+        raise HTTPException(status_code=204, detail="No se han encontrado etiquetas")
 
     return tags
 

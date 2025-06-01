@@ -1,18 +1,23 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
+
+@dataclass
+class DomainTag:
+    id: UUID
+    name: str
 
 @dataclass
 class DomainMessage:
-    def __init__(self, from_user_id, to_user_id, text, timestamp=None,from_user_tags=None, to_user_tags=None, is_read=False, id=None):
-        self.id = id
-        self.from_user_id = from_user_id
-        self.to_user_id = to_user_id
-        self.text = text
-        self.timestamp = timestamp
-        self.to_user_tags : List[UUID] = to_user_tags or []
-        self.from_user_tags : List[UUID] = from_user_tags or []
-        self.is_read = is_read
+    id: Optional[UUID]
+    from_user_id: UUID
+    to_user_id: UUID
+    text: str
+    timestamp: Optional[datetime]
+    from_user_tags: Optional[List[DomainTag]]
+    to_user_tags: Optional[List[DomainTag]]
+    is_read: bool = False
 
 
 @dataclass

@@ -10,6 +10,8 @@ services:
       - pgdata-auth:/var/lib/postgresql/data
     networks:
       - internal
+    ports:
+      - 5432:5432
 
   auth-api:
     container_name: auth-api
@@ -47,6 +49,8 @@ services:
       sh -c "./wait-for-it.sh tagging-db:5432 --strict --timeout=60 -- python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
       - internal
+    ports:
+      - 8008:8000
 
   tagging-db:
     image: postgres:15
@@ -69,6 +73,8 @@ services:
       - pgdata-talkeasy:/var/lib/postgresql/data
     networks:
       - internal
+    ports:
+      - 5436:5432
 
   talkeasy-api:
     build: ./talkeasy/
