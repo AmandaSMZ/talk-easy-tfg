@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import and_, or_, select
@@ -37,20 +38,21 @@ class SQLAlchemyMessageRepository(IMessageRepository):
         ]
         self.db.add_all(tag_objs)
         await self.db.commit()
-
-    async def get_messages_by_chat(self, user1: UUID, user2: UUID, last_id: Optional[UUID] = None) -> List[DomainMessage]:
+    
+    async def get_messages_by_chat(self, current_user: UUID, with_user: UUID, last_id: Optional[UUID] = None) -> List[DomainMessage]:
+    # Query para obtener los mensajes del chat
         stmt = select(MessageModel).where(
-            or_(
-                and_(MessageModel.from_user_id == user1, MessageModel.to_user_id == user2),
-                and_(MessageModel.from_user_id == user2, MessageModel.to_user_id == user1)
-            )
+        or_(
+            and_(MessageModel.from_user_id == current_user, MessageModel.to_user_id == with_user),
+            and_(MessageModel.from_user_id == with_user, MessageModel.to_user_id == current_user)
         )
+    )
 
         if last_id:
             subq = (
-                select(MessageModel.timestamp)
-                .where(MessageModel.id == last_id)
-                .scalar_subquery()
+            select(MessageModel.timestamp)
+            .where(MessageModel.id == last_id)
+            .scalar_subquery()
             )
             stmt = stmt.where(MessageModel.timestamp > subq)
 
@@ -58,35 +60,43 @@ class SQLAlchemyMessageRepository(IMessageRepository):
         res = await self.db.execute(stmt)
         messages = res.scalars().all()
 
+    # Extraer todos los ids de mensajes para buscar tags
+        message_ids = [msg.id for msg in messages]
+        print (len(message_ids))
+        if not message_ids:
+            return []
+
+    # Query para obtener todos los tags para esos mensajes y usuarios relacionados
+        tag_stmt = select(
+        MessageTagUserModel.message_id,
+        MessageTagUserModel.user_id,
+        MessageTagUserModel.tag_id
+        ).where(
+        MessageTagUserModel.message_id.in_(message_ids)
+        )
+        tag_res = await self.db.execute(tag_stmt)
+        tags_data = tag_res.all()
+
+    # Organizar tags por (message_id, user_id)
+        tags_map = defaultdict(list)
+        for message_id, user_id, tag_id in tags_data:
+            tags_map[(message_id, user_id)].append(DomainTag(id=tag_id, name=""))
+
+    # Construir el resultado
         result = []
         for msg in messages:
-            result_from = await self.db.execute(
-                select(MessageTagUserModel.tag_id).where(
-                    MessageTagUserModel.message_id == msg.id,
-                    MessageTagUserModel.user_id == msg.from_user_id
-                )
-            )
-            from_user_tag_ids = result_from.scalars().all()
-            from_user_tags = [DomainTag(id=tag_id, name="") for tag_id in from_user_tag_ids]
-
-            result_to = await self.db.execute(
-                select(MessageTagUserModel.tag_id).where(
-                    MessageTagUserModel.message_id == msg.id,
-                    MessageTagUserModel.user_id == msg.to_user_id
-                )
-            )
-            to_user_tag_ids = result_to.scalars().all()
-            to_user_tags = [DomainTag(id=tag_id, name="") for tag_id in to_user_tag_ids]
-
+            from_user_tags = tags_map.get((msg.id, msg.from_user_id), [])
+            to_user_tags = tags_map.get((msg.id, msg.to_user_id), [])
+        
             domain_msg = DomainMessage(
-                id=msg.id,
-                from_user_id=msg.from_user_id,
-                to_user_id=msg.to_user_id,
-                text=msg.text,
-                timestamp=msg.timestamp,
-                from_user_tags=from_user_tags,
-                to_user_tags=to_user_tags,
-                is_read=msg.is_read or False
+            id=msg.id,
+            from_user_id=msg.from_user_id,
+            to_user_id=msg.to_user_id,
+            text=msg.text,
+            timestamp=msg.timestamp,
+            from_user_tags=from_user_tags,
+            to_user_tags=to_user_tags,
+            is_read=msg.is_read or False
             )
             result.append(domain_msg)
 
@@ -98,16 +108,12 @@ class SQLAlchemyMessageRepository(IMessageRepository):
             select(MessageTagUserModel.message_id)
             .where(
             and_(
-                MessageTagUserModel.tag_id == tag_id,
-                MessageTagUserModel.user_id == user_id
+                MessageTagUserModel.user_id == user_id,
+                MessageTagUserModel.tag_id == tag_id 
             )
              )
         )
-
-
         message_ids = [row[0] for row in result.all()]
-
-        print(message_ids)
 
         if not message_ids:
             return []
@@ -123,11 +129,9 @@ class SQLAlchemyMessageRepository(IMessageRepository):
             )
         )
         )
-        .order_by(MessageModel.timestamp.desc())
+        .order_by(MessageModel.timestamp.asc())
         )
         messages = result.scalars().all()
-        print('------------------------')
-        print(len(messages))
         domain_messages = []
 
         for msg in messages:

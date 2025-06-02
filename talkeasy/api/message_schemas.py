@@ -20,6 +20,7 @@ class MessageIn(MessageBase):
 
 class MessageOut(MessageBase):
     id: UUID
+    with_user_id: Optional[UUID] = None
     timestamp: datetime
     type: Literal["sent", "received"]
     tags: Optional[List[Tag]] = None

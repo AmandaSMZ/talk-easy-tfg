@@ -47,20 +47,35 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
 @router.get("/messages/chat/{with_user}", response_model=List[MessageOut])
 async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
     headers = user_headers(user)
-    endpoint = f"messages/chat/{with_user}"
+    
     messages = await proxy_request(
         base_url=settings.TALKEASY_API_URL,
         method="GET",
-        endpoint=endpoint,
+        endpoint=f"messages/chat/{with_user}",
         expected_status_code=200,
         headers=headers
     )
+
     if not isinstance(messages, list):
         raise HTTPException(status_code=502, detail="Respuesta inesperada del backend de mensajes")
-    
+
     if not messages:
         raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No se han encontrado mensajes")
-    
+
+    user_ids = {str(msg['with_user_id']) for msg in messages}
+
+    body = UsersIdRequest(users_id=list(user_ids)).model_dump()
+    users = await proxy_request(
+        base_url=settings.AUTH_API_URL,
+        method="POST",
+        endpoint="auth/search/users",
+        expected_status_code=200,
+        headers=headers,
+        body=body
+    )
+
+    user_map = {user['id']: user for user in users}
+
     user_tags = await proxy_request(
         base_url=settings.TAGGING_API_URL,
         method="GET",
@@ -68,17 +83,17 @@ async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
         expected_status_code=200,
         headers=headers
     )
-
     tag_id_to_name = {str(tag['id']): tag['name'] for tag in user_tags}
 
     for msg in messages:
+        msg['with_user'] = user_map.get(str(msg['with_user_id']))
         msg['tags'] = [
             {
                 "id": tag['id'],
                 "name": tag_id_to_name.get(str(tag['id']), "")
             }
-        for tag in msg.get('tags', [])
-    ]
+            for tag in msg.get('tags', [])
+        ]
 
     return messages
 
@@ -113,14 +128,56 @@ async def proxy_list_conversations(user=Depends(get_current_user)):
 
 @router.get(
     "/messages/by-tag/{tag_id}",
-    summary="Obtiene mensajes por etiqueta para el usuario autenticado"
+    summary="Obtiene mensajes por etiqueta para el usuario autenticado",
+    response_model=List[MessageOut]
 )
 async def proxy_get_messages_by_tag(tag_id: UUID, user=Depends(get_current_user)):
     headers = user_headers(user)
-    return await proxy_request(
+
+    messages = await proxy_request(
         base_url=settings.TALKEASY_API_URL,
         method="GET",
         endpoint=f"messages/by-tag/{tag_id}",
         expected_status_code=200,
         headers=headers
     )
+
+    if not isinstance(messages, list):
+        raise HTTPException(status_code=502, detail="Respuesta inesperada del backend de mensajes")
+
+    if not messages:
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No se han encontrado mensajes")
+
+    user_ids = {str(msg['with_user']) for msg in messages}
+    body = UsersIdRequest(users_id=list(user_ids)).model_dump()
+
+    users = await proxy_request(
+        base_url=settings.AUTH_API_URL,
+        method="POST",
+        endpoint="auth/search/users",
+        expected_status_code=200,
+        headers=headers,
+        body=body
+    )
+    user_map = {user['id']: user for user in users}
+
+    user_tags = await proxy_request(
+        base_url=settings.TAGGING_API_URL,
+        method="GET",
+        endpoint="tags/available",
+        expected_status_code=200,
+        headers=headers
+    )
+    tag_id_to_name = {str(tag['id']): tag['name'] for tag in user_tags}
+
+    for msg in messages:
+        msg['with_user'] = user_map.get(str(msg['with_user']))
+        msg['tags'] = [
+            {
+                "id": tag['id'],
+                "name": tag_id_to_name.get(str(tag['id']), "")
+            }
+            for tag in msg.get('tags', [])
+        ]
+
+    return messages

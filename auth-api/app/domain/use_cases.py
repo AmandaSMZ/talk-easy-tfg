@@ -4,21 +4,20 @@ from sqlalchemy import UUID
 
 from app.security.password import verify_password
 from app.security.token import create_access_token
-from app.api.schemas import UserCreate, UserCredentials, UserRead, UserSearch
+from app.api.schemas import UserCreate, UserCredentials, UserSearch
 from app.data.db.repository import UserRepository
 
-async def register_user(user_repo: UserRepository, user_data: UserCreate) -> UserRead:
+async def register_user(user_repo: UserRepository, user_data: UserCreate) -> UserSearch:
     
     new_user = await user_repo.create_user(user_data)
 
     if not new_user:
         return None
 
-    return UserRead(
+    return UserSearch(
         id=new_user.id,
         email=new_user.email,
-        username=new_user.username,
-        created_at=new_user.created_at
+        username=new_user.username
     )
 
 
@@ -39,7 +38,7 @@ async def login_user(user_repo: UserRepository, user_data: UserCredentials) -> D
         }
 async def get_user_by_id(repo: UserRepository, user_id: UUID):
     user = await repo.get_user_by_id(user_id=user_id)
-    return(UserRead(id=user.id, email=user.email, username=user.username, created_at=user.created_at))
+    return(UserSearch(id=user.id, email=user.email, username=user.username))
 
 async def search_users(
     email: str,

@@ -68,16 +68,21 @@ def map_domain_to_message_out(messages: List[DomainMessage], user_id: UUID) -> L
     message_out_list: List[MessageOut] = []
 
     for msg in messages:
-        if msg.to_user_id == user_id:
+        print(f"msg.to_user_id: {msg.to_user_id}, user_id: {user_id}")
+        print(type(user_id), type(msg.to_user_id))
+        if str(msg.to_user_id) == user_id:
             message_type = "received"
-            tags = [Tag(id=tag.id, name='') for tag in msg.from_user_tags]
+            tags = [Tag(id=tag.id, name='') for tag in msg.to_user_tags]
+            with_user_id = msg.from_user_id
         else:
             message_type = "sent"
-            tags = [Tag(id=tag.id, name='') for tag in msg.to_user_tags]
+            tags = [Tag(id=tag.id, name='') for tag in msg.from_user_tags]
+            with_user_id = msg.to_user_id
 
         message_out = MessageOut(
             id=msg.id,
             text=msg.text,
+            with_user_id=with_user_id,
             timestamp=msg.timestamp,
             type=message_type,
             tags=tags

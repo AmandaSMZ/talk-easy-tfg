@@ -1,9 +1,7 @@
 from typing import List
-from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from app.api.schemas import UserRead,UserCredentials, Token, UserCreate, UserSearch, UsersIdRequest
+from app.api.schemas import UserCredentials, Token, UserCreate, UserSearch, UsersIdRequest
 from app.domain.use_cases import get_user_by_id, register_user, login_user, search_users, search_users_list
 from app.data.db.repository import UserRepository
 from app.dependencies.repository import get_user_repository
@@ -13,7 +11,7 @@ from app.dependencies.auth import get_current_user
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
-@router.post("/register",status_code=status.HTTP_201_CREATED, response_model=UserRead)
+@router.post("/register",status_code=status.HTTP_201_CREATED, response_model=UserSearch)
 async def register(
     user: UserCreate, 
     user_repo: UserRepository = Depends(get_user_repository)
@@ -38,7 +36,7 @@ async def login(
     
     return token
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me", response_model=UserSearch)
 async def get_me(user_id: User = Depends(get_current_user),
                  repo: UserRepository = Depends(get_user_repository)):
 
@@ -52,6 +50,19 @@ async def search_users_route(
     user_repo: UserRepository = Depends(get_user_repository)
 ):
     result = await search_users(email, user_repo)
+    
+    if not result:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return result
+
+@router.get("/search/user-id/{user_id}", status_code=status.HTTP_200_OK, response_model=List[UserSearch])
+async def search_users_route(
+    email: str,
+    _: User = Depends(get_current_user),
+    user_repo: UserRepository = Depends(get_user_repository)
+):
+    result = await get_user_by_id(email, user_repo)
     
     if not result:
         return Response(status_code=status.HTTP_204_NO_CONTENT)

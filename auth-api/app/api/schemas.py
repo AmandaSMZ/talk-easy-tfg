@@ -15,9 +15,6 @@ class UserSearch(BaseModel):
     email: EmailStr
     username: str
 
-class UserRead(UserSearch):
-    created_at: datetime
-
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

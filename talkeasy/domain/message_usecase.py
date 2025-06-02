@@ -26,6 +26,7 @@ async def send_message(repo: IMessageRepository, msg_in: MessageIn, from_user_id
 
         msg_out_sender = domain_to_schema_message(msg_saved, current_user_id=from_user_id)
         msg_out_sender.tags = msg_in.from_user_tags or []
+        msg_out_sender.type = 'sent'
         return msg_out_sender
 
     except Exception as e:
@@ -33,24 +34,10 @@ async def send_message(repo: IMessageRepository, msg_in: MessageIn, from_user_id
 
 
 async def get_chat_between_users(repo: IMessageRepository, current_user:UUID, with_user_id:UUID, last_id:UUID=None):
-    messages = await repo.get_messages_by_chat(current_user, with_user_id, last_id)
-    response = []
+    messages = await repo.get_messages_by_chat(current_user=current_user, with_user=with_user_id, last_id=last_id)
 
-    for msg in messages:
-        msg_type = "received" if msg.to_user_id == current_user else "sent"
+    return map_domain_to_message_out(messages, current_user)
 
-        user_tags = msg.from_user_tags if msg_type == "sent" else msg.to_user_tags
-
-        msg_out = MessageOut(
-            id=msg.id,
-            text=msg.text,
-            timestamp=msg.timestamp,
-            type=msg_type,
-            tags=[Tag(id=tag.id, name="") for tag in user_tags],
-        )
-        response.append(msg_out)
-
-    return response
 
 
 async def list_conversations_use_case(
@@ -61,8 +48,9 @@ async def list_conversations_use_case(
     return result
 
 async def get_messages_by_tag_use_case(repo: IMessageRepository, user_id:UUID, tag_id:UUID) -> List[MessageOut]:
-    domain_messages = await repo.get_messages_by_tag(tag_id=tag_id, user_id=user_id)
+    domain_messages = await repo.get_messages_by_tag(user_id=user_id, tag_id=tag_id)
     print('----------------------------------------------------------------------------------------')
     print (len(domain_messages))
     print('-----------------------------------------------------------------------------------')
+    print('vamos a devolver')
     return map_domain_to_message_out(domain_messages, user_id)
