@@ -56,14 +56,21 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
         user_obj = await user_cache.get_user(str(msg['with_user_id']), headers)
         msg['with_user'] = user_obj.model_dump()
 
+    msg_receiver = messages[0]
+    msg_sender = messages[1]
 
-    with_user_id = msg["with_user_id"]
-    del msg['with_user_id']
+
+    receiver = msg_sender["with_user_id"]
+    sender = msg_receiver["with_user_id"]
+
+    del msg_sender['with_user_id']
+    del msg_receiver['with_user_id']
 
     try:
-        await connection_manager.send_personal_message(msg, UUID(with_user_id))
+        await connection_manager.send_personal_message(msg_receiver, UUID(receiver))
+        await connection_manager.send_personal_message(msg_sender, UUID(sender))
     except:
-        print('error enviando el mensaje por ws /', with_user_id)
+        print('error enviando el mensaje por ws /')
 
     return messages
         
