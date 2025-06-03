@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlalchemy import UUID
 
@@ -41,7 +41,7 @@ async def get_user_by_id(repo: UserRepository, user_id: UUID) -> UserSearch:
     return(UserSearch(id=user.id, email=user.email, username=user.username))
 
 async def search_users(
-    email: str,
+    email: Optional[str],
     user_repo: UserRepository
 ) -> list[UserSearch]:
     

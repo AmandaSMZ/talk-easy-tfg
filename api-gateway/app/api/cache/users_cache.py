@@ -22,12 +22,12 @@ class UserCache:
 
         if user_data:
             user = UserSearch(**user_data)
-            self.cache[user_id] = user
+            self.cache[user.id] = user
             return user
         else:
             raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
 
-    async def fetch_user_from_id(self, user_id: str, header) -> Optional[dict]:
+    async def fetch_user_from_id(self, user_id: str, header) -> dict:
         async with AsyncClient() as client:
             response = await client.get(
                 f"{self.api_url}/search/user-id", params={"id": user_id}, headers=header
@@ -35,7 +35,7 @@ class UserCache:
             if response.status_code == 200:
                 data = response.json()
                 if data:
-                    return data[0]
+                    return data
             return None
 
     async def fetch_all_users(self, header: dict):

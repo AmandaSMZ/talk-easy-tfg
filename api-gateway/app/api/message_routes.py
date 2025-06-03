@@ -10,6 +10,7 @@ from config import settings
 from app.api.utils import convert_uuids_to_str, user_headers
 from app.websockets.connection_manager import connection_manager
 from app.api.cache.users_cache import user_cache
+from app.api.cache.tags_cache import tag_cache
 
 router = APIRouter()
 
@@ -36,8 +37,10 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
     body = convert_uuids_to_str(body)
 
     to_user_tags = body['to_user_tags']
+    print(to_user_tags)
+    
     from_user_tags = body['from_user_tags']
-
+    print(from_user_tags)
 
     messages = await proxy_request(
         base_url=settings.TALKEASY_API_URL,
@@ -74,6 +77,37 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
 
     return messages
         
+'''
+@router.get("/messages2/chat/{with_user}", response_model=List[MessageOut])
+async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
+    headers = user_headers(user)
+
+    messages = await proxy_request(
+        base_url=settings.TALKEASY_API_URL,
+        method="GET",
+        endpoint=f"messages/chat/{with_user}",
+        expected_status_code=200,
+        headers=headers
+    )
+
+    if not isinstance(messages, list):
+        raise HTTPException(status_code=502, detail="Respuesta inesperada del backend de mensajes")
+
+    if not messages:
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No se han encontrado mensajes")
+
+    for msg in messages:
+        user_obj = await user_cache.get_user(str(msg['with_user_id']), headers)
+        msg['with_user'] = user_obj.model_dump()
+
+        enriched_tags = []
+        for tag in msg.get('tags', []):
+            tag_obj = await tag_cache.get_tag(str(tag['id']), headers)
+            enriched_tags.append(tag_obj.model_dump())
+        msg['tags'] = enriched_tags
+
+    return messages
+'''
 
 @router.get("/messages/chat/{with_user}", response_model=List[MessageOut])
 async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
@@ -155,8 +189,62 @@ async def proxy_list_conversations(user=Depends(get_current_user)):
     )
 
     return users
+'''
+@router.get("/conversations", response_model=List[UserSearch])
+async def proxy_list_conversations(user=Depends(get_current_user)):
+    headers = user_headers(user)
 
+    user_ids = await proxy_request(
+        base_url=settings.TALKEASY_API_URL,
+        method="GET",
+        endpoint="conversations",
+        expected_status_code=200,
+        headers=headers
+    )
 
+    if not user_ids:
+        return []
+
+    # Obtener usuarios desde cache o API si no están cacheados
+    users = []
+    for user_id in user_ids:
+        user_obj = await user_cache.get_user(str(user_id), headers)
+        users.append(user_obj)
+
+    return users
+'''
+
+@router.get(
+    "/messages/by-tag/{tag_id}",
+    summary="Obtiene mensajes por etiqueta para el usuario autenticado",
+    response_model=List[MessageOut]
+)
+async def proxy_get_messages_by_tag(tag_id: UUID, user=Depends(get_current_user)):
+    headers = user_headers(user)
+
+    messages = await proxy_request(
+        base_url=settings.TALKEASY_API_URL,
+        method="GET",
+        endpoint=f"messages/by-tag/{tag_id}",
+        expected_status_code=200,
+        headers=headers
+    )
+
+    if not isinstance(messages, list):
+        raise HTTPException(status_code=502, detail="Respuesta inesperada del backend de mensajes")
+
+    if not messages:
+        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No se han encontrado mensajes")
+
+    for msg in messages:
+        msg['with_user'] = await user_cache.get_user(str(msg['with_user_id']), headers)
+        del msg['with_user_id']
+        msg['tags'] = [await tag_cache.get_tag(str(tag), headers)
+            for tag in msg.get('tags', [])
+        ]
+
+    return messages
+'''
 @router.get(
     "/messages/by-tag/{tag_id}",
     summary="Obtiene mensajes por etiqueta para el usuario autenticado",
@@ -212,3 +300,4 @@ async def proxy_get_messages_by_tag(tag_id: UUID, user=Depends(get_current_user)
         ]
 
     return messages
+'''

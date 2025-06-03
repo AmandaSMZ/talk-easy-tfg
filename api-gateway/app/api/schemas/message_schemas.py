@@ -7,10 +7,6 @@ from app.api.schemas.user_schemas import UserSearch
 class TagIn(BaseModel):
     name: str
 
-class Tag(TagIn):
-    id: UUID
-
-
 class Tag(BaseModel):
     id: UUID
     name: str
