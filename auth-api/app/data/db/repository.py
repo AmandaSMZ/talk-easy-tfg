@@ -42,8 +42,12 @@ class UserRepository:
         return new_user
     
     async def search_users_by_email(self, email: str) -> list[User]:
-        result = await self.db.execute(
-            select(User).where(User.email.ilike(f"%{email}%"))
+        if (email is not None):
+            result = await self.db.execute(
+                select(User).where(User.email.ilike(f"%{email}%")))
+        else:
+            result = await self.db.execute(select(User)
+            
         )
         return result.scalars().all()
     

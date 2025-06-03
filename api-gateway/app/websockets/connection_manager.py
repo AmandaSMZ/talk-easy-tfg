@@ -3,8 +3,10 @@ from uuid import UUID
 from fastapi import WebSocket
 
 class ConnectionManager:
+
+    active_connections: Dict[UUID, WebSocket]
     def __init__(self):
-        self.active_connections: Dict[UUID, WebSocket] = {}
+        self.active_connections = {}
 
     async def connect(self, user_id: UUID, websocket: WebSocket):
         self.active_connections[user_id] = websocket
@@ -14,6 +16,7 @@ class ConnectionManager:
 
     async def send_personal_message(self, message: dict, user_id: UUID):
         websocket = self.active_connections.get(user_id)
+        print(f'Este es el mensaje : {message['text']}')
         if websocket:
             await websocket.send_json(message)
     

@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from app.api.schemas import UserCredentials, Token, UserCreate, UserSearch, UsersIdRequest
 from app.domain.use_cases import get_user_by_id, register_user, login_user, search_users, search_users_list
@@ -43,9 +43,9 @@ async def get_me(user_id: User = Depends(get_current_user),
     return await get_user_by_id(repo, user_id)
     
 
-@router.get("/search/{email}", status_code=status.HTTP_200_OK, response_model=List[UserSearch])
+@router.get("/search/", status_code=status.HTTP_200_OK, response_model=List[UserSearch])
 async def search_users_route(
-    email: str,
+    email: Optional[str] = Query(None),
     _: User = Depends(get_current_user),
     user_repo: UserRepository = Depends(get_user_repository)
 ):
@@ -56,13 +56,13 @@ async def search_users_route(
 
     return result
 
-@router.get("/search/user-id/{user_id}", status_code=status.HTTP_200_OK, response_model=List[UserSearch])
+@router.get("/search/user-id/{user_id}", status_code=status.HTTP_200_OK, response_model=UserSearch)
 async def search_users_route(
-    email: str,
+    user_id: str,
     _: User = Depends(get_current_user),
     user_repo: UserRepository = Depends(get_user_repository)
 ):
-    result = await get_user_by_id(email, user_repo)
+    result = await get_user_by_id(user_id=user_id, repo=user_repo)
     
     if not result:
         return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -7,16 +7,16 @@ from api.message_schemas import MessageIn, MessageOut, Tag
 def tags_schema_to_domain(tags: Optional[List[Tag]]) -> List[DomainTag]:
     if not tags:
         return []
-    return [DomainTag(id=tag.id, name=tag.name) for tag in tags]
+    return [DomainTag(id=UUID(tag.id), name=tag.name) for tag in tags]
 
 def tags_domain_to_schema(tags: List[DomainTag]) -> List[Tag]:
-    return [Tag(id=tag.id, name=tag.name) for tag in tags]
+    return [Tag(id=str(tag.id), name=tag.name) for tag in tags]
 
-def schema_to_domain_message(msg_in: MessageIn, from_user_id: UUID) -> DomainMessage:
+def schema_to_domain_message(msg_in: MessageIn, from_user_id: str) -> DomainMessage:
     return DomainMessage(
         id=None,
-        from_user_id=from_user_id,
-        to_user_id=msg_in.to_user_id,
+        from_user_id=UUID(from_user_id),
+        to_user_id=UUID(msg_in.to_user_id),
         text=msg_in.text,
         timestamp=None,
         from_user_tags=tags_schema_to_domain(msg_in.from_user_tags),
@@ -25,13 +25,14 @@ def schema_to_domain_message(msg_in: MessageIn, from_user_id: UUID) -> DomainMes
     )
 
 def domain_to_schema_message(domain_msg: DomainMessage, current_user_id: UUID) -> MessageOut:
-    # Decide si el mensaje es enviado o recibido según current_user_id
+
     msg_type = "sent" if domain_msg.from_user_id == current_user_id else "received"
-    # Elige qué tags mostrar según tipo
+    with_user = domain_msg.from_user_id if msg_type == 'sent' else domain_msg.to_user_id
     tags = domain_msg.from_user_tags if msg_type == "sent" else domain_msg.to_user_tags
 
     return MessageOut(
-        id=domain_msg.id,
+        id=str(domain_msg.id),
+        with_user_id= str(with_user),
         text=domain_msg.text,
         timestamp=domain_msg.timestamp,
         type=msg_type,
@@ -68,21 +69,19 @@ def map_domain_to_message_out(messages: List[DomainMessage], user_id: UUID) -> L
     message_out_list: List[MessageOut] = []
 
     for msg in messages:
-        print(f"msg.to_user_id: {msg.to_user_id}, user_id: {user_id}")
-        print(type(user_id), type(msg.to_user_id))
-        if str(msg.to_user_id) == user_id:
+        if str(msg.to_user_id) == str(user_id):
             message_type = "received"
-            tags = [Tag(id=tag.id, name='') for tag in msg.to_user_tags]
-            with_user_id = msg.from_user_id
+            tags = [Tag(id=str(tag.id), name='') for tag in msg.to_user_tags]
+            with_user_id = str(msg.from_user_id)
         else:
             message_type = "sent"
-            tags = [Tag(id=tag.id, name='') for tag in msg.from_user_tags]
+            tags = [Tag(id=str(tag.id), name='') for tag in msg.from_user_tags]
             with_user_id = msg.to_user_id
 
         message_out = MessageOut(
-            id=msg.id,
+            id=str(msg.id),
             text=msg.text,
-            with_user_id=with_user_id,
+            with_user_id=str(with_user_id),
             timestamp=msg.timestamp,
             type=message_type,
             tags=tags

@@ -12,32 +12,67 @@ class SQLAlchemyMessageRepository(IMessageRepository):
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def save_message(self, message: DomainMessage) -> DomainMessage:
+    async def save_message(self, message: DomainMessage):
         db_msg = domain_message_to_db_model(message)
         self.db.add(db_msg)
-        await self.db.commit()
+
+        await self.db.flush() 
         await self.db.refresh(db_msg)
 
-        to_user_tags_id = [tag.id for tag in message.to_user_tags] if message.to_user_tags else []
-        if to_user_tags_id:
-            await self._update_message_tags(db_msg.to_user_id, db_msg.id, to_user_tags_id)
+        await self._add_message_tags(db_msg, message)
 
-        from_user_tags_id = [tag.id for tag in message.from_user_tags] if message.from_user_tags else []
-        if from_user_tags_id:
-            await self._update_message_tags(db_msg.from_user_id, db_msg.id, from_user_tags_id)
+        await self._ensure_conversation(db_msg.from_user_id, db_msg.to_user_id)
+        await self.db.commit()
 
         message.id = db_msg.id
         message.timestamp = db_msg.timestamp
 
         return message
-    
-    async def _update_message_tags(self, user_id: UUID, msg_id: UUID, tags: List[UUID]):
-        tag_objs = [
-            MessageTagUserModel(message_id=msg_id, user_id=user_id, tag_id=tag_id)
-            for tag_id in tags
-        ]
-        self.db.add_all(tag_objs)
-        await self.db.commit()
+
+
+    async def _add_message_tags(self, db_msg: MessageModel, message: DomainMessage) -> None:
+        """Añade todos los tag-objects a la sesión, sin hacer commit."""
+        tag_objs: List[MessageTagUserModel] = []
+
+        for tag in message.to_user_tags or []:
+            tag_objs.append(
+                MessageTagUserModel(
+                    message_id=db_msg.id,
+                    user_id=db_msg.to_user_id,
+                    tag_id=tag.id
+                )
+            )
+
+        for tag in message.from_user_tags or []:
+            tag_objs.append(
+                MessageTagUserModel(
+                    message_id=db_msg.id,
+                    user_id=db_msg.from_user_id,
+                    tag_id=tag.id
+                )
+
+            )
+
+        if tag_objs:
+            self.db.add_all(tag_objs)
+            await self.db.flush()
+
+    async def _ensure_conversation(self, u_from: UUID, u_to: UUID) -> None:
+        """Busca/crea la conversación en la misma transacción."""
+
+        u1, u2 = sorted([u_from, u_to], key=lambda u: str(u))
+        stmt = select(Conversation).where(
+            and_(
+                Conversation.user1_id == u1,
+                Conversation.user2_id == u2
+            )
+        )
+        res  = await self.db.execute(stmt)
+        conv = res.scalar_one_or_none()
+        if conv is None:
+            self.db.add(Conversation(user1_id=u1, user2_id=u2))
+            await self.db.flush()
+
     
     async def get_messages_by_chat(self, current_user: UUID, with_user: UUID, last_id: Optional[UUID] = None) -> List[DomainMessage]:
     # Query para obtener los mensajes del chat
@@ -60,13 +95,11 @@ class SQLAlchemyMessageRepository(IMessageRepository):
         res = await self.db.execute(stmt)
         messages = res.scalars().all()
 
-    # Extraer todos los ids de mensajes para buscar tags
         message_ids = [msg.id for msg in messages]
         print (len(message_ids))
         if not message_ids:
             return []
 
-    # Query para obtener todos los tags para esos mensajes y usuarios relacionados
         tag_stmt = select(
         MessageTagUserModel.message_id,
         MessageTagUserModel.user_id,
@@ -77,12 +110,10 @@ class SQLAlchemyMessageRepository(IMessageRepository):
         tag_res = await self.db.execute(tag_stmt)
         tags_data = tag_res.all()
 
-    # Organizar tags por (message_id, user_id)
         tags_map = defaultdict(list)
         for message_id, user_id, tag_id in tags_data:
             tags_map[(message_id, user_id)].append(DomainTag(id=tag_id, name=""))
 
-    # Construir el resultado
         result = []
         for msg in messages:
             from_user_tags = tags_map.get((msg.id, msg.from_user_id), [])
@@ -103,9 +134,19 @@ class SQLAlchemyMessageRepository(IMessageRepository):
         return result
 
     async def get_messages_by_tag(self, user_id: UUID, tag_id: UUID) -> List[DomainMessage]:
-        
-        result = await self.db.execute(
-            select(MessageTagUserModel.message_id)
+        stmt = select(MessageModel).join(MessageTagUserModel, MessageModel.id == MessageTagUserModel.message_id).where(
+            and_(
+            MessageTagUserModel.user_id == user_id,
+            MessageTagUserModel.tag_id == tag_id,
+            or_(
+                MessageModel.from_user_id == user_id,
+                MessageModel.to_user_id == user_id
+            )
+                )
+            ).order_by(MessageModel.timestamp.asc())
+        '''
+            result = await self.db.execute(
+                select(MessageTagUserModel.message_id)
             .where(
             and_(
                 MessageTagUserModel.user_id == user_id,
@@ -131,6 +172,9 @@ class SQLAlchemyMessageRepository(IMessageRepository):
         )
         .order_by(MessageModel.timestamp.asc())
         )
+        '''
+
+        result = await self.db.execute(stmt)
         messages = result.scalars().all()
         domain_messages = []
 
@@ -155,16 +199,3 @@ class SQLAlchemyMessageRepository(IMessageRepository):
             interlocutors.append(conv.user2_id if conv.user1_id == UUID(str(user_id)) else conv.user1_id)
 
         return list(set(interlocutors))
-
-    async def create_conversation_if_not_exists(self, user1: UUID, user2: UUID) -> None:
-        u1, u2 = sorted([user1, user2], key=str)
-        query = select(Conversation).where(
-            (Conversation.user1_id == u1) & (Conversation.user2_id == u2)
-        )
-        result = await self.db.execute(query)
-        conv = result.scalar_one_or_none()
-
-        if not conv:
-            conv = Conversation(user1_id=u1, user2_id=u2)
-            self.db.add(conv)
-            await self.db.commit()

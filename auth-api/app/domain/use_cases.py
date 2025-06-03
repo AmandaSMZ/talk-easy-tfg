@@ -36,7 +36,7 @@ async def login_user(user_repo: UserRepository, user_data: UserCredentials) -> D
         "user_id": user.id,
         "username": user.username
         }
-async def get_user_by_id(repo: UserRepository, user_id: UUID):
+async def get_user_by_id(repo: UserRepository, user_id: UUID) -> UserSearch:
     user = await repo.get_user_by_id(user_id=user_id)
     return(UserSearch(id=user.id, email=user.email, username=user.username))
 

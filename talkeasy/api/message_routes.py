@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post(
         "/messages/send", 
-        response_model=MessageOut, 
+        response_model=List[MessageOut], 
         status_code=status.HTTP_201_CREATED,
         summary="Envía un mensaje a un usuario"
         )
@@ -20,7 +20,7 @@ async def send_message_route(
     repo: IMessageRepository = Depends(get_message_repository),
     user_id = Depends(get_current_user)
 ):
-    return await send_message(repo, msg, user_id)
+    return await send_message(repo=repo, msg_in=msg, from_user_id=user_id)
 
 @router.get(
     "/messages/chat/{with_user}",

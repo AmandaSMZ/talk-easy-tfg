@@ -8,8 +8,11 @@ from app.api.schemas.user_schemas import UserSearch, UsersIdRequest
 from app.proxy import proxy_request
 from config import settings
 from app.api.utils import convert_uuids_to_str, user_headers
+from app.websockets.connection_manager import connection_manager
+from app.api.cache.users_cache import user_cache
 
 router = APIRouter()
+
 
 
 @router.post("/messages/send", status_code=status.HTTP_201_CREATED)
@@ -32,8 +35,11 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
 
     body = convert_uuids_to_str(body)
 
+    to_user_tags = body['to_user_tags']
+    from_user_tags = body['from_user_tags']
 
-    return await proxy_request(
+
+    messages = await proxy_request(
         base_url=settings.TALKEASY_API_URL,
         method="POST",
         endpoint="messages/send",
@@ -41,8 +47,26 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
         body=body,
         headers=headers
     )
+    
+
+    messages[0]['tags'] = to_user_tags
+    messages[1]['tags'] = from_user_tags
+
+    for msg in messages:
+        user_obj = await user_cache.get_user(str(msg['with_user_id']), headers)
+        msg['with_user'] = user_obj.model_dump()
 
 
+    with_user_id = msg["with_user_id"]
+    del msg['with_user_id']
+
+    try:
+        await connection_manager.send_personal_message(msg, UUID(with_user_id))
+    except:
+        print('error enviando el mensaje por ws /', with_user_id)
+
+    return messages
+        
 
 @router.get("/messages/chat/{with_user}", response_model=List[MessageOut])
 async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
@@ -148,7 +172,7 @@ async def proxy_get_messages_by_tag(tag_id: UUID, user=Depends(get_current_user)
     if not messages:
         raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No se han encontrado mensajes")
 
-    user_ids = {str(msg['with_user']) for msg in messages}
+    user_ids = {str(msg['with_user_id']) for msg in messages}
     body = UsersIdRequest(users_id=list(user_ids)).model_dump()
 
     users = await proxy_request(
@@ -171,7 +195,7 @@ async def proxy_get_messages_by_tag(tag_id: UUID, user=Depends(get_current_user)
     tag_id_to_name = {str(tag['id']): tag['name'] for tag in user_tags}
 
     for msg in messages:
-        msg['with_user'] = user_map.get(str(msg['with_user']))
+        msg['with_user'] = user_map.get(str(msg['with_user_id']))
         msg['tags'] = [
             {
                 "id": tag['id'],

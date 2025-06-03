@@ -91,6 +91,8 @@ services:
       /code
     networks:
       - internal
+    ports:
+      - 8010:8000
 
   gateway-api:
     build:

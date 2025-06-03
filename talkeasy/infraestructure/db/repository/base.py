@@ -20,7 +20,3 @@ class IMessageRepository(ABC):
     @abstractmethod
     async def list_conversations(self, user_id: UUID) -> List[UUID]:
         pass
-
-    @abstractmethod
-    async def create_conversation_if_not_exists(self, user1: UUID, user2: UUID) -> None:
-        pass
