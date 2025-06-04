@@ -1,10 +1,15 @@
-from pydantic import BaseModel
-from typing import List, Optional, Literal
+from typing import List, Literal, Optional
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from uuid import UUID
+from app.api.schemas.user_schemas import UserSearch
+
+class TagIn(BaseModel):
+    name: str
 
 class Tag(BaseModel):
-    id: str
-    name: Optional[str] = None
+    id: UUID
+    name: str
 
     class Config:
         orm_mode = True
@@ -18,11 +23,12 @@ class MessageIn(MessageBase):
     to_user_tags: Optional[List[Tag]] = None
 
 class MessageOut(MessageBase):
-    id: str
-    with_user_id: Optional[str] = None
+    id: UUID
     timestamp: datetime
+    with_user : UserSearch
     type: Literal["sent", "received"]
     tags: Optional[List[Tag]] = None
 
     class Config:
         orm_mode = True
+

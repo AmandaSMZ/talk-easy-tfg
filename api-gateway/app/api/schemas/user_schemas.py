@@ -1,7 +1,5 @@
 from typing import List
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
-from uuid import UUID
 
 class UserCredentials(BaseModel):
     email: EmailStr
@@ -11,15 +9,15 @@ class UserCreate(UserCredentials):
     username: str
 
 class UserSearch(BaseModel):
-    id:UUID
+    id: str
     email: EmailStr
     username: str
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user_id:UUID
+    user_id:str
     username: str
 
 class UsersIdRequest(BaseModel):
-    users_id: List[UUID]
+    users_id: List[str]

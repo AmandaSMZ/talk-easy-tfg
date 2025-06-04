@@ -1,4 +1,5 @@
 import logging
+from typing import List
 from fastapi import APIRouter, Depends
 from app.api.schemas import TagRequest, TagResponse
 from app.infraestructure.service import classifier_service

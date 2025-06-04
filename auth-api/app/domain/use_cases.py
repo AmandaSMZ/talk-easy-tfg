@@ -1,21 +1,23 @@
-from typing import Dict
+from typing import Dict, List, Optional
+
+from sqlalchemy import UUID
 
 from app.security.password import verify_password
 from app.security.token import create_access_token
-from app.api.schemas import UserCredentials, UserRead
+from app.api.schemas import UserCreate, UserCredentials, UserSearch
 from app.data.db.repository import UserRepository
 
-async def register_user(user_repo: UserRepository, user_data: UserCredentials) -> UserRead:
+async def register_user(user_repo: UserRepository, user_data: UserCreate) -> UserSearch:
     
     new_user = await user_repo.create_user(user_data)
 
     if not new_user:
         return None
 
-    return UserRead(
+    return UserSearch(
         id=new_user.id,
         email=new_user.email,
-        created_at=new_user.created_at
+        username=new_user.username
     )
 
 
@@ -30,20 +32,36 @@ async def login_user(user_repo: UserRepository, user_data: UserCredentials) -> D
         
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user_id": user.id,
+        "username": user.username
         }
+async def get_user_by_id(repo: UserRepository, user_id: UUID) -> UserSearch:
+    user = await repo.get_user_by_id(user_id=user_id)
+    return(UserSearch(id=user.id, email=user.email, username=user.username))
 
 async def search_users(
-    email: str,
+    email: Optional[str],
     user_repo: UserRepository
-) -> list[UserRead]:
+) -> list[UserSearch]:
     
     users = await user_repo.search_users_by_email(email)
     
     return [
-        UserRead(
+        UserSearch(
             id=user.id,
             email=user.email,
-            created_at=user.created_at
+            username=user.username,
+        ) for user in users
+    ]
+
+async def search_users_list(repo : UserRepository, user_ids:List[UUID]):
+    users = await repo.search_users_by_ids(user_ids)
+
+    return [
+        UserSearch(
+            id=user.id,
+            email=user.email,
+            username=user.username,
         ) for user in users
     ]

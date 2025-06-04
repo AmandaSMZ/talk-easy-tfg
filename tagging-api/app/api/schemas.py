@@ -9,12 +9,9 @@ class TagRequest(BaseModel):
 class TagIn(BaseModel):
     name: str
 
-class TagOut(BaseModel):
-    id: UUID
-
-class Tag(TagOut):
-    name: str
+class Tag(TagIn):
+    id: str
     
 class TagResponse(BaseModel):
-    from_user_tags: List[UUID]
-    to_user_tags: List[UUID]
+    from_user_tags: List[Tag]
+    to_user_tags: List[Tag]

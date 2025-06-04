@@ -16,6 +16,10 @@ class User(Base):
         String, unique=True, 
         index=True
         )
+    username: Mapped[str] = mapped_column(
+        String, 
+        index=True
+        )
     hashed_password: Mapped[str] = mapped_column(
         String
         )

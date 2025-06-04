@@ -1,44 +1,29 @@
-from fastapi import WebSocket, HTTPException, status
-from fastapi.websockets import WebSocketState
 from uuid import UUID
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from app.websockets.connection_manager import connection_manager
 from app.dependencies import decode_token_and_get_user
-
 
 ws_router = APIRouter()
 
 @ws_router.websocket("/ws")
-async def websocket_proxy(websocket: WebSocket):
-    await websocket.accept()
-
-    token = websocket.query_params.get('token')
+async def websocket_endpoint(websocket: WebSocket):
+    token = websocket.query_params.get("token")
     if not token:
-        await websocket.close(code=1008)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     try:
-        user_data = decode_token_and_get_user(token)
-        user_id = user_data['user_id']
-    except HTTPException:
-        await websocket.close(code=1008)
-        return
-
-    backend_ws_url = f"ws://talkeasy-api:8000/ws?user_id={user_id}"
-
-    try:
-        import websockets
-
-        async with websockets.connect(backend_ws_url) as backend_ws:
-
-            async def send_to_client():
-                while True:
-                    msg = await backend_ws.recv()
-                    if websocket.application_state == WebSocketState.CONNECTED:
-                        await websocket.send_text(msg)
-                    else:
-                        break
-
-            await send_to_client()
-
+        user = decode_token_and_get_user(token)
+        user_id = UUID(user["user_id"])
     except Exception:
-        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await websocket.accept()
+    await connection_manager.connect(user_id, websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        connection_manager.disconnect(user_id)

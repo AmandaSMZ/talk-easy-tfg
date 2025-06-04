@@ -1,10 +1,7 @@
 
 import logging
-from typing import List
 from fastapi import HTTPException
 from app import constants
-from app.api.schemas import TagOut
-from app.infraestructure.db.repository import get_tag_ids_by_names
 
 ZERO_SHOT_TASK = "zero-shot-classification"
 ZERO_SHOT_MODEL = "facebook/bart-large-mnli"
