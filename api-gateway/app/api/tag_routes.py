@@ -11,8 +11,10 @@ router = APIRouter()
 
 
 @router.post("/tags/add", status_code=status.HTTP_201_CREATED)
-async def proxy_send_message(request: List[TagIn], user=Depends(get_current_user)):
-    body =  [tag.model_dump() for tag in request]
+async def proxy_send_message(
+        request: List[TagIn],
+        user=Depends(get_current_user)):
+    body = [tag.model_dump() for tag in request]
     headers = user_headers(user)
 
     return await proxy_request(
@@ -24,7 +26,10 @@ async def proxy_send_message(request: List[TagIn], user=Depends(get_current_user
         headers=headers
     )
 
-@router.get("/tags/available", response_model=List[Tag], status_code=status.HTTP_200_OK)
+
+@router.get("/tags/available",
+            response_model=List[Tag],
+            status_code=status.HTTP_200_OK)
 async def proxy_get_available_tags(user=Depends(get_current_user)):
     headers = user_headers(user)
     return await proxy_request(
@@ -34,6 +39,7 @@ async def proxy_get_available_tags(user=Depends(get_current_user)):
         expected_status_code=status.HTTP_200_OK,
         headers=headers
     )
+
 
 @router.delete("/tags/delete/{tag_id}", status_code=status.HTTP_200_OK)
 async def proxy_delete_tag(tag_id: UUID, user=Depends(get_current_user)):

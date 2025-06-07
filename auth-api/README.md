@@ -74,7 +74,6 @@ Crea un archivo .env:
     POSTGRES_PORT=5432
     POSTGRES_USER=auth_user
     POSTGRES_PASSWORD=auth_password
-    JWT_SECRET_KEY=tu_clave_secreta_segura
 ```
 3. Docker Compose
 ```compose

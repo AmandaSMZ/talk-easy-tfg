@@ -21,7 +21,7 @@ Envía un nuevo mensaje a otro usuario.
 {
   "to_user": "uuid-del-receptor",
   "text": "Hola, ¿cómo estás?",
-  "tag_names": ["importante", "personal"]
+  "tag_id": ["id1", "id2"]
 }
 ```
 
@@ -29,11 +29,10 @@ Envía un nuevo mensaje a otro usuario.
 ```json
 {
   "id": "uuid-mensaje",
-  "from_user": "uuid-emisor",
-  "to_user": "uuid-receptor",
+  "with_user_id": "uuid-emisor",
   "text": "Hola, ¿cómo estás?",
   "created_at": "2025-05-26T10:00:00",
-  "tags": ["importante", "personal"]
+  "tags": [{"id":"id1", "name":""}]
 }
 ```
 
@@ -51,42 +50,11 @@ Authorization: Bearer <token>
   {
     "id": "uuid1",
     "text": "Hola",
-    "from_user": "uuidA",
-    "to_user": "uuidB",
+    "with_user": "uuidA",
     "created_at": "2025-05-26T10:00:00",
     "tags": []
   },
   ...
-]
-```
-
-### `POST /messages/tags`
-Asocia etiquetas a un mensaje.
-
-**Request:**
-```json
-{
-  "message_id": "uuid",
-  "tags": ["trabajo", "urgente"]
-}
-```
-
-**Response:**
-```json
-{
-  "message_id": "uuid",
-  "tags": ["trabajo", "urgente"]
-}
-```
-
-### `GET /messages/tags`
-Lista de etiquetas disponibles para el usuario autenticado.
-
-**Response:**
-```json
-[
-  { "id": 1, "name": "trabajo" },
-  { "id": 2, "name": "personal" }
 ]
 ```
 
@@ -106,11 +74,6 @@ POSTGRES_HOST=messages-db
 POSTGRES_PORT=5432
 POSTGRES_USER=messages_user
 POSTGRES_PASSWORD=securepassword
-
-MONGODB_URI=mongodb+srv://usuario:clave@cluster.mongodb.net/talkeasy
-
-JWT_SECRET_KEY=tu_clave_jwt
-AUTH_API_URL=http://auth-api:8000
 ```
 
 ### 3. Docker Compose

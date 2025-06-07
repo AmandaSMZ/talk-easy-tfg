@@ -61,7 +61,7 @@ async def search_users_id_route(
     user=Depends(get_current_user)
 ):
     headers = user_headers(user)
-    endpoint = f'/auth/search/user-id/{user_id}'
+    endpoint = f'/auth/search/user-id?user_id={user_id}'
 
     return await proxy_request(base_url=settings.AUTH_API_URL,
                                method="GET",

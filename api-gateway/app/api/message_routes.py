@@ -1,4 +1,3 @@
-import json
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -13,7 +12,6 @@ from app.api.cache.users_cache import user_cache
 from app.api.cache.tags_cache import tag_cache
 
 router = APIRouter()
-
 
 
 @router.post("/messages/send", status_code=status.HTTP_201_CREATED)
@@ -60,7 +58,6 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
     msg_receiver = messages[0]
     msg_sender = messages[1]
 
-
     receiver = msg_sender["with_user_id"]
     sender = msg_receiver["with_user_id"]
 
@@ -68,49 +65,24 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
     del msg_receiver['with_user_id']
 
     try:
-        await connection_manager.send_personal_message(msg_receiver, UUID(receiver))
-        await connection_manager.send_personal_message(msg_sender, UUID(sender))
+        await connection_manager.send_personal_message(
+            msg_receiver,
+            UUID(receiver))
+        await connection_manager.send_personal_message(
+            msg_sender, UUID(sender))
     except:
-        print('error enviando el mensaje por ws /')
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al enviar el mensaje a través del WebSocket"
+        )
 
     return messages
-        
-'''
-@router.get("/messages2/chat/{with_user}", response_model=List[MessageOut])
-async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
-    headers = user_headers(user)
 
-    messages = await proxy_request(
-        base_url=settings.TALKEASY_API_URL,
-        method="GET",
-        endpoint=f"messages/chat/{with_user}",
-        expected_status_code=200,
-        headers=headers
-    )
-
-    if not isinstance(messages, list):
-        raise HTTPException(status_code=502, detail="Respuesta inesperada del backend de mensajes")
-
-    if not messages:
-        raise HTTPException(status_code=status.HTTP_204_NO_CONTENT, detail="No se han encontrado mensajes")
-
-    for msg in messages:
-        user_obj = await user_cache.get_user(str(msg['with_user_id']), headers)
-        msg['with_user'] = user_obj.model_dump()
-
-        enriched_tags = []
-        for tag in msg.get('tags', []):
-            tag_obj = await tag_cache.get_tag(str(tag['id']), headers)
-            enriched_tags.append(tag_obj.model_dump())
-        msg['tags'] = enriched_tags
-
-    return messages
-'''
 
 @router.get("/messages/chat/{with_user}", response_model=List[MessageOut])
 async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
     headers = user_headers(user)
-    
+
     messages = await proxy_request(
         base_url=settings.TALKEASY_API_URL,
         method="GET",

@@ -41,21 +41,16 @@ Etiqueta automáticamente mensajes usando un modelo preentrenado.
 **Request:**
 ```json
 {
-  "text": "Texto a etiquetar",
-  "labels": ["etiqueta1", "etiqueta2", "etiqueta3"]
+  "text": "Texto a etiquetar"
 }
 ```
 
 **Response:**
 ```json
-{
-  "predicted_labels": ["etiqueta2"],
-  "probabilities": [
-    {"label": "etiqueta2", "score": 0.82},
-    {"label": "etiqueta1", "score": 0.18},
-    {"label": "etiqueta3", "score": 0.05}
+[
+    {"id": "id_etiqueta2", "name": "etiqueta2"},
+    {"id": "id_etiqueta1", "name": "etiqueta1"},
   ]
-}
 ```
 
 ---
@@ -66,13 +61,68 @@ Etiqueta automáticamente mensajes usando un modelo preentrenado.
 
     Asegúrate de tener Docker instalado en tu máquina. Puedes descargarte e instalar Docker desde su [página oficial](https://www.docker.com/).
 
+2. **Variables de entorno**
 
-2. **Descarga y corre el contenedor**:
+Crea un archivo .env:
+```env
+    POSTGRES_DB=auth_db
+    POSTGRES_HOST=auth-db
+    POSTGRES_PORT=5432
+    POSTGRES_USER=auth_user
+    POSTGRES_PASSWORD=auth_password
+```
 
-    ```sh
-    docker run -d --name taggerapi -p 8002:8002 amandasmz/taggerapi
-    ```
-3. **Verificación**
+3. **Docker Compose**
+   
+```compose
+  tagging-api:
+    container_name: tagging-api
+    image: tagging-api
+    restart: unless-stopped
+    env_file:
+      - ./tagging-api/.env
+    build: 
+      context: ./tagging-api
+    volumes:
+      - ./wait-for-it.sh:/code/wait-for-it.sh
+      - ./tagging-api:/code
+    depends_on:
+      - tagging-db
+    command:
+      sh -c "./wait-for-it.sh tagging-db:5432 --strict --timeout=60 -- python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - 8000:8000
+
+
+  tagging-db:
+    image: postgres:15
+    container_name: tagging-db
+    restart: unless-stopped
+    env_file:
+      - ./tagging-api/.env
+    volumes:
+      - pgdata-tagging:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+```
+
+4. **Iniciar Servicios**
+
+```bash
+    docker-compose up -d
+```
+5. **Monitorización**
+
+```bash
+# Ver logs
+docker logs tagging-api
+
+# Logs en tiempo real
+docker logs -f tagging-api
+```
+
+5. **Verificación**
 
     Abre un navegador web y accede a http://localhost:8000/docs. Aparecerá la documentación oficial de la api y podrás probar sus endpoints.
 
@@ -96,8 +146,10 @@ Etiqueta automáticamente mensajes usando un modelo preentrenado.
 ```plantuml
 @startuml
 actor "Cliente" as User
+node "ZeroShotClassifierService"
+node "POST /tag-message"
 rectangle "Tagging API" {
-    User -> "POST /tag-message": Envía texto y etiquetas
+    User -> "POST /tag-message": Envía texto
     "POST /tag-message" -> "ZeroShotClassifierService": Procesa petición
     "ZeroShotClassifierService" --> "POST /tag-message": Devuelve etiquetas
     "POST /tag-message" --> User: Respuesta con etiquetas\nprobabilidades
@@ -109,8 +161,7 @@ rectangle "Tagging API" {
 import requests
 
 data = {
-    "text": "Quiero reservar un hotel en Madrid",
-    "labels": ["viaje", "salud", "ocio"]
+    "text": "Quiero reservar un hotel en Madrid"
 }
 
 r = requests.post("http://localhost:8002/tag-message", json=data)
