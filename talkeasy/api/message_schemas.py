@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Literal
 from datetime import datetime
 
+
 class Tag(BaseModel):
     id: str
     name: Optional[str] = None
@@ -9,13 +10,16 @@ class Tag(BaseModel):
     class Config:
         orm_mode = True
 
+
 class MessageBase(BaseModel):
     text: str
+
 
 class MessageIn(MessageBase):
     to_user_id: str
     from_user_tags: Optional[List[Tag]] = None
     to_user_tags: Optional[List[Tag]] = None
+
 
 class MessageOut(MessageBase):
     id: str
