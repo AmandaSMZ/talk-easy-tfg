@@ -57,6 +57,8 @@ services:
       - pgdata-tagging:/var/lib/postgresql/data
     networks:
       - internal
+    ports:
+      - 5432:5432
 
   talkeasy-db:
     image: postgres:15

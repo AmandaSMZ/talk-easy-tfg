@@ -34,10 +34,9 @@ async def proxy_send_message(request: MessageIn, user=Depends(get_current_user))
     body = convert_uuids_to_str(body)
 
     to_user_tags = body['to_user_tags']
-    print(to_user_tags)
-    
+
     from_user_tags = body['from_user_tags']
-    print(from_user_tags)
+
 
     messages = await proxy_request(
         base_url=settings.TALKEASY_API_URL,
@@ -114,7 +113,7 @@ async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
         user_tags = await proxy_request(
             base_url=settings.TAGGING_API_URL,
             method="GET",
-            endpoint="tags/available",
+            endpoint="tags/all",
             expected_status_code=200,
             headers=headers
         )
@@ -130,21 +129,21 @@ async def proxy_get_chat(with_user: str, user=Depends(get_current_user)):
     for msg in messages:
         msg['with_user'] = user_map.get(str(msg['with_user_id']))
         tags_raw = msg.get('tags', [])
-    seen_tag_ids = set()
-    filtered_tags = []
+        seen_tag_ids = set()
+        filtered_tags = []
     
-    for tag in tags_raw:
-        tag_id = tag['id']
-        tag_name = tag_id_to_name.get(str(tag_id), "")
+        for tag in tags_raw:
+            tag_id = tag['id']
+            tag_name = tag_id_to_name.get(str(tag_id), "")
         
-        if tag_id not in seen_tag_ids and tag_name:
-            filtered_tags.append({
-                "id": tag_id,
-                "name": tag_name
-            })
-            seen_tag_ids.add(tag_id)
+            if tag_id not in seen_tag_ids and tag_name:
+                filtered_tags.append({
+                    "id": tag_id,
+                    "name": tag_name
+                })
+                seen_tag_ids.add(tag_id)
     
-    msg['tags'] = filtered_tags
+        msg['tags'] = filtered_tags
 
     return messages
 

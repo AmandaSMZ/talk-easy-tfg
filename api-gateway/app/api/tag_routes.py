@@ -12,9 +12,9 @@ router = APIRouter()
 
 @router.post("/tags/add", status_code=status.HTTP_201_CREATED)
 async def proxy_send_message(
-        request: List[TagIn],
+        request: TagIn,
         user=Depends(get_current_user)):
-    body = [tag.model_dump() for tag in request]
+    body = request.model_dump()
     headers = user_headers(user)
 
     return await proxy_request(
